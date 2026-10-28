@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "risklens-educational"
+version = "0.1.0"
+description = "Educational financial risk-model validation and research project"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{name = "RiskLens Contributors"}]
+dependencies = ["pandas>=2.2,<3", "numpy>=1.26,<3"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10"]
+
+[project.scripts]
+risklens-validate = "risklens.data.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

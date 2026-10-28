@@ -1,0 +1,28 @@
+# Python caches and build outputs
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environments and secrets
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Data should not be committed until terms are verified
+/data/raw/*
+!/data/raw/.gitkeep
+/data/processed/*
+!/data/processed/.gitkeep
+
+# Local notebooks and OS files
+.ipynb_checkpoints/
+.DS_Store
+.idea/
+.vscode/
