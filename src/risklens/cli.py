@@ -52,10 +52,43 @@ def build_parser() -> argparse.ArgumentParser:
     tune.add_argument("--xgb-trials", type=int, default=0)
     tune.add_argument("--lstm-trials", type=int, default=0)
     tune.add_argument("--device", choices=("auto", "mps", "cpu"), default="auto")
+    frozen = sub.add_parser(
+        "evaluate-frozen", help="Frozen XGBoost vs verified Optuna LSTM trial #86"
+    )
+    frozen.add_argument("--nifty", default="data/processed/multiyear/nifty50_ohlc.csv")
+    frozen.add_argument(
+        "--external", default="data/processed/external/nifty50_external_development.csv"
+    )
+    frozen.add_argument(
+        "--study-db", default="data/processed/optuna_search/optuna_studies.sqlite3"
+    )
+    frozen.add_argument("--device", choices=("auto", "cpu", "mps"), default="auto")
+    frozen.add_argument("--output-dir", default="data/processed/phase4_validation")
+    frozen.add_argument("--overwrite", action="store_true")
     return p
 
 
 def run(args: argparse.Namespace) -> int:
+    if args.command == "evaluate-frozen":
+        from risklens.models.frozen_comparison import save_frozen_comparison
+
+        report = save_frozen_comparison(
+            args.nifty,
+            args.external,
+            args.output_dir,
+            study_db=args.study_db,
+            device=args.device,
+            overwrite=args.overwrite,
+        )
+        print("PASS: fixed XGBoost versus Optuna LSTM trial #86; 2025+ sealed")
+        for period, result in report["period_scores"].items():
+            print(f"{period}: {result['rows']} observations")
+            for model, scores in result["metrics"].items():
+                print(f"  {model}: Brier={scores['brier_score']:.6f}, "
+                      f"ROC-AUC={scores['roc_auc']}")
+        print("Report:", Path(args.output_dir) / "frozen_model_report.md")
+        return 0
+
     if args.command == "compare":
         from risklens.models.multifactor_comparison import save_multifactor_comparison
 
