@@ -9,7 +9,6 @@ from risklens.experiments import seed_stability as ex
 def _data():
     n = 24
     dates = pd.bdate_range("2022-01-03", periods=n)
-    rng = np.random.default_rng(22)
     pred = []
     for seed_index in range(7):
         for variant in ex.VARIANT_NAMES:
