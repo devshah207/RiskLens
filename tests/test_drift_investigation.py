@@ -113,7 +113,7 @@ def test_drift_report_years_and_distinct_baselines(tmp_path, monkeypatch):
 
 def test_invalid_vix_provenance_fails_loudly(tmp_path, monkeypatch):
     rng = np.random.default_rng(45)
-    dev_dates = pd.bdate_range("2020-01-01", "2024-12-30")
+    dev_dates = pd.bdate_range("2016-03-01", "2024-12-30")
     dates = pd.bdate_range("2025-01-02", "2026-09-29")
     dev = pd.DataFrame({
         "date": dev_dates,
