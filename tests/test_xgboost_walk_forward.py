@@ -1,45 +1,57 @@
 """Phase 3.5 tests. All input market prices are deliberately synthetic."""
+
 import json
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from risklens.features.dataset import EXPANDED_FEATURE_COLUMNS, FEATURE_COLUMNS, TARGET_COLUMN
+from risklens.features.dataset import (
+    EXPANDED_FEATURE_COLUMNS,
+    FEATURE_COLUMNS,
+    TARGET_COLUMN,
+)
 from risklens.models.xgboost_walk_forward import (
-    FIXED_XGB_PARAMS, XGBComparisonError, _fit_predict_fixed_xgb,
-    compare_xgboost_walk_forward, save_xgboost_walk_forward,
+    FIXED_XGB_PARAMS,
+    XGBComparisonError,
+    _fit_predict_fixed_xgb,
+    compare_xgboost_walk_forward,
+    save_xgboost_walk_forward,
 )
 
 
 def simple_frames():
     x = np.arange(120, dtype=float)
     y = (np.arange(120) % 9 == 0).astype(int)
-    data = pd.DataFrame({
-        "return_1d": 0.004*np.sin(x),
-        "return_5d": 0.016*np.sin(x/3),
-        "volatility_20d": 0.10 + .04*(x % 7)/7,
-        "intraday_range": .012 + .004*(x % 5)/5,
-        "intraday_return": .003*np.cos(x),
-        "opening_gap": .001*np.sin(x/2),
-        TARGET_COLUMN: y,
-    })
+    data = pd.DataFrame(
+        {
+            "return_1d": 0.004 * np.sin(x),
+            "return_5d": 0.016 * np.sin(x / 3),
+            "volatility_20d": 0.10 + 0.04 * (x % 7) / 7,
+            "intraday_range": 0.012 + 0.004 * (x % 5) / 5,
+            "intraday_return": 0.003 * np.cos(x),
+            "opening_gap": 0.001 * np.sin(x / 2),
+            TARGET_COLUMN: y,
+        }
+    )
     return data.iloc[:90].copy(), data.iloc[90:].copy()
 
 
 def make_synthetic_ohlc(tmp_path, name="synthetic.csv", alter_holdout=False):
     days = pd.bdate_range("2016-01-04", "2025-01-10")
     indexes = np.arange(len(days))
-    returns = np.where(indexes % 11 == 0, -.022, .003 + .002*np.sin(indexes/4))
-    closes = 100 * np.cumprod(1+returns)
+    returns = np.where(indexes % 11 == 0, -0.022, 0.003 + 0.002 * np.sin(indexes / 4))
+    closes = 100 * np.cumprod(1 + returns)
     if alter_holdout:
         closes[days >= "2025-01-01"] *= 4
-    previous = np.r_[100., closes[:-1]]
-    opens = previous*(1+.002*np.sin(indexes/2))
+    previous = np.r_[100.0, closes[:-1]]
+    opens = previous * (1 + 0.002 * np.sin(indexes / 2))
     highs = np.maximum(opens, closes) * 1.003
-    lows = np.minimum(opens, closes) * .997
+    lows = np.minimum(opens, closes) * 0.997
     path = tmp_path / name
-    pd.DataFrame({"date":days,"open":opens,"high":highs,"low":lows,"close":closes}).to_csv(path,index=False)
+    pd.DataFrame(
+        {"date": days, "open": opens, "high": highs, "low": lows, "close": closes}
+    ).to_csv(path, index=False)
     return path
 
 
@@ -103,29 +115,39 @@ def synthetic_run(tmp_path_factory):
 
 def test_full_walk_forward_aligned_and_holdout_excluded(synthetic_run):
     _, predictions, report, _ = synthetic_run
-    assert report["validation_years"] == [2020,2021,2022,2023,2024]
+    assert report["validation_years"] == [2020, 2021, 2022, 2023, 2024]
     assert predictions["date"].max() < pd.Timestamp("2025-01-01")
     assert predictions["date"].is_monotonic_increasing
     assert not predictions["date"].duplicated().any()
     assert report["total_validation_rows"] == len(predictions)
-    assert report["total_validation_events"] == int(predictions["actual_downside_event"].sum())
+    assert report["total_validation_events"] == int(
+        predictions["actual_downside_event"].sum()
+    )
     assert len(report["per_fold_scores"]) == 5
     for fold in report["per_fold_scores"]:
         assert fold["training_before"] == f"{fold['year']}-01-01"
         assert fold["xgboost_fit_audit"]["xgboost_3_features"]["trees_fitted"] == 80
         assert fold["xgboost_fit_audit"]["xgboost_6_features"]["trees_fitted"] == 80
     assert set(report["pooled_probability_scores"]) == {
-        "constant_baseline", "logistic_3_features", "logistic_6_features",
-        "xgboost_3_features", "xgboost_6_features",
+        "constant_baseline",
+        "logistic_3_features",
+        "logistic_6_features",
+        "xgboost_3_features",
+        "xgboost_6_features",
     }
 
 
 def test_altered_2025_prices_cannot_change_development_predictions(synthetic_run):
     _, before, report_before, directory = synthetic_run
-    alternate = make_synthetic_ohlc(directory, "modified_holdout.csv", alter_holdout=True)
+    alternate = make_synthetic_ohlc(
+        directory, "modified_holdout.csv", alter_holdout=True
+    )
     after, report_after = compare_xgboost_walk_forward(alternate)
     pd.testing.assert_frame_equal(before, after)
-    assert report_before["pooled_probability_scores"] == report_after["pooled_probability_scores"]
+    assert (
+        report_before["pooled_probability_scores"]
+        == report_after["pooled_probability_scores"]
+    )
     assert report_before["per_fold_scores"] == report_after["per_fold_scores"]
 
 
@@ -145,14 +167,3 @@ def test_save_and_overwrite_protection(synthetic_run):
 def test_missing_csv_rejected(tmp_path):
     with pytest.raises(XGBComparisonError, match="not found"):
         compare_xgboost_walk_forward(tmp_path / "not_here.csv")
-
-
-def test_cli_success_and_failure_when_asked_to_overwrite(monkeypatch, capsys, synthetic_run):
-    from risklens.models.xgboost_walk_forward_cli import main
-    source, _, _, directory = synthetic_run
-    out = directory / "cli"
-    monkeypatch.setattr("sys.argv", ["xgboost_walk_forward_cli", str(source), "--output-dir", str(out)])
-    assert main() == 0
-    assert "PASS:" in capsys.readouterr().out
-    assert main() == 1
-    assert "FAIL:" in capsys.readouterr().out

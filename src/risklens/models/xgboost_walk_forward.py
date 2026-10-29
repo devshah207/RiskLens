@@ -17,17 +17,24 @@ from xgboost import XGBClassifier
 import xgboost
 
 from risklens.features.dataset import (
-    EXPANDED_FEATURE_COLUMNS, FEATURE_COLUMNS, FULL_FEATURE_COLUMNS, TARGET_COLUMN,
-    FeatureDatasetError, build_development_features,
+    EXPANDED_FEATURE_COLUMNS,
+    FEATURE_COLUMNS,
+    FULL_FEATURE_COLUMNS,
+    TARGET_COLUMN,
+    FeatureDatasetError,
+    build_development_features,
 )
-from risklens.models.baselines import _metrics
+from risklens.evaluation.metrics import _metrics, _pooled_probability_scores
+from risklens.evaluation.features import (
+    EXTERNAL_FEATURE_COLUMNS as EXTERNAL_FEATURE_COLUMNS,
+    MULTIFACTOR_FEATURE_COLUMNS,
+)
 from risklens.models.ohlc_comparison import (
-    OHLCComparisonError, _pooled_probability_scores, compare_ohlc_features,
+    OHLCComparisonError,
+    compare_ohlc_features,
 )
-from risklens.models.walk_forward import FOLD_YEARS, FINAL_HOLDOUT_START
+from risklens.evaluation.splits import FOLD_YEARS, FINAL_HOLDOUT_START
 
-EXTERNAL_FEATURE_COLUMNS = ("india_vix_level", "sp500_previous_return_1d")
-MULTIFACTOR_FEATURE_COLUMNS = FULL_FEATURE_COLUMNS + EXTERNAL_FEATURE_COLUMNS
 
 PREDICTIONS_FILENAME = "xgboost_walk_forward_predictions.csv"
 REPORT_FILENAME = "xgboost_walk_forward_report.json"
@@ -59,7 +66,9 @@ class XGBComparisonError(ValueError):
 
 
 def _fit_predict_fixed_xgb(
-    train: pd.DataFrame, validation: pd.DataFrame, features: tuple[str, ...],
+    train: pd.DataFrame,
+    validation: pd.DataFrame,
+    features: tuple[str, ...],
 ) -> tuple[np.ndarray, dict]:
     """Fit a fresh XGBoost classifier using train ONLY; never pass validation labels.
 
@@ -67,8 +76,15 @@ def _fit_predict_fixed_xgb(
     There is deliberately no early stopping or eval_set, as that would use the
     reported validation fold for a training-duration decision.
     """
-    if features not in (FEATURE_COLUMNS, EXPANDED_FEATURE_COLUMNS, FULL_FEATURE_COLUMNS, MULTIFACTOR_FEATURE_COLUMNS):
-        raise XGBComparisonError("Only the original 3 or predefined 6, 9 or 11 feature sets are supported")
+    if features not in (
+        FEATURE_COLUMNS,
+        EXPANDED_FEATURE_COLUMNS,
+        FULL_FEATURE_COLUMNS,
+        MULTIFACTOR_FEATURE_COLUMNS,
+    ):
+        raise XGBComparisonError(
+            "Only the original 3 or predefined 6, 9 or 11 feature sets are supported"
+        )
     x_train = train.loc[:, list(features)].to_numpy(dtype=float)
     y_train = train[TARGET_COLUMN].to_numpy(dtype=int)
     x_valid = validation.loc[:, list(features)].to_numpy(dtype=float)
@@ -79,12 +95,17 @@ def _fit_predict_fixed_xgb(
     model = XGBClassifier(**FIXED_XGB_PARAMS)
     model.fit(x_train, y_train)
     probabilities = model.predict_proba(x_valid)[:, 1]
-    if not np.isfinite(probabilities).all() or ((probabilities < 0) | (probabilities > 1)).any():
+    if (
+        not np.isfinite(probabilities).all()
+        or ((probabilities < 0) | (probabilities > 1)).any()
+    ):
         raise XGBComparisonError("XGBoost returned invalid probabilities")
     # Feature importance here is normalized *gain*, a descriptive measure of
     # fitted splits, NOT causality or guaranteed future predictive relevance.
     gains = model.get_booster().get_score(importance_type="gain")
-    gain_named = {name: float(gains.get(f"f{i}", 0.0)) for i, name in enumerate(features)}
+    gain_named = {
+        name: float(gains.get(f"f{i}", 0.0)) for i, name in enumerate(features)
+    }
     return probabilities, {
         "train_rows": int(len(train)),
         "train_events": int(y_train.sum()),
@@ -112,8 +133,10 @@ def compare_xgboost_walk_forward(source_csv: str | Path) -> tuple[pd.DataFrame, 
     fold_reports = []
     for year in FOLD_YEARS:
         validation_start = f"{year}-01-01"
-        validation_end = f"{year+1}-01-01"
-        expected = reference.loc[reference["validation_year"] == year].reset_index(drop=True)
+        validation_end = f"{year + 1}-01-01"
+        expected = reference.loc[reference["validation_year"] == year].reset_index(
+            drop=True
+        )
         yearly = expected.copy()
         fold_summary = {
             "year": year,
@@ -122,9 +145,18 @@ def compare_xgboost_walk_forward(source_csv: str | Path) -> tuple[pd.DataFrame, 
             "validation_rows": len(expected),
             "validation_events": int(expected["actual_downside_event"].sum()),
             "scores": {
-                "constant_baseline": _metrics(expected["actual_downside_event"].to_numpy(dtype=int), expected["baseline_probability"].to_numpy(dtype=float)),
-                "logistic_3_features": _metrics(expected["actual_downside_event"].to_numpy(dtype=int), expected["original_3feature_probability"].to_numpy(dtype=float)),
-                "logistic_6_features": _metrics(expected["actual_downside_event"].to_numpy(dtype=int), expected["expanded_6feature_probability"].to_numpy(dtype=float)),
+                "constant_baseline": _metrics(
+                    expected["actual_downside_event"].to_numpy(dtype=int),
+                    expected["baseline_probability"].to_numpy(dtype=float),
+                ),
+                "logistic_3_features": _metrics(
+                    expected["actual_downside_event"].to_numpy(dtype=int),
+                    expected["original_3feature_probability"].to_numpy(dtype=float),
+                ),
+                "logistic_6_features": _metrics(
+                    expected["actual_downside_event"].to_numpy(dtype=int),
+                    expected["expanded_6feature_probability"].to_numpy(dtype=float),
+                ),
             },
             "xgboost_fit_audit": {},
         }
@@ -141,30 +173,57 @@ def compare_xgboost_walk_forward(source_csv: str | Path) -> tuple[pd.DataFrame, 
                     include_ohlc_features=expanded,
                 )
             except FeatureDatasetError as exc:
-                raise XGBComparisonError(f"{year}: feature preparation failed: {exc}") from exc
+                raise XGBComparisonError(
+                    f"{year}: feature preparation failed: {exc}"
+                ) from exc
 
             # A strict controlled comparison: same dates, same true labels.
             if not valid["date"].reset_index(drop=True).equals(expected["date"]):
-                raise XGBComparisonError(f"{year}: different validation dates in {label}")
-            if not np.array_equal(valid[TARGET_COLUMN].to_numpy(dtype=int), expected["actual_downside_event"].to_numpy(dtype=int)):
-                raise XGBComparisonError(f"{year}: different validation labels in {label}")
+                raise XGBComparisonError(
+                    f"{year}: different validation dates in {label}"
+                )
+            if not np.array_equal(
+                valid[TARGET_COLUMN].to_numpy(dtype=int),
+                expected["actual_downside_event"].to_numpy(dtype=int),
+            ):
+                raise XGBComparisonError(
+                    f"{year}: different validation labels in {label}"
+                )
             if not (train["date"] < pd.Timestamp(validation_start)).all():
-                raise XGBComparisonError(f"{year}: train date crossed validation boundary")
-            if (not valid.empty and not train.empty and
-                    train["date"].max() >= valid["date"].min()):
-                raise XGBComparisonError(f"{year}: training and validation dates overlap")
+                raise XGBComparisonError(
+                    f"{year}: train date crossed validation boundary"
+                )
+            if (
+                not valid.empty
+                and not train.empty
+                and train["date"].max() >= valid["date"].min()
+            ):
+                raise XGBComparisonError(
+                    f"{year}: training and validation dates overlap"
+                )
             if dataset_audit["training_boundary_labels_purged"] != 1:
                 raise XGBComparisonError(f"{year}: expected one cross-year label purge")
             probabilities, fit_audit = _fit_predict_fixed_xgb(train, valid, features)
             yearly[f"{label}_probability"] = probabilities
-            fold_summary["scores"][label] = _metrics(valid[TARGET_COLUMN].to_numpy(dtype=int), probabilities)
+            fold_summary["scores"][label] = _metrics(
+                valid[TARGET_COLUMN].to_numpy(dtype=int), probabilities
+            )
             fold_summary["xgboost_fit_audit"][label] = fit_audit
         all_folds.append(yearly)
         fold_reports.append(fold_summary)
 
-    combined = pd.concat(all_folds, ignore_index=True).sort_values("date").reset_index(drop=True)
-    if combined["date"].duplicated().any() or (combined["date"] >= pd.Timestamp(FINAL_HOLDOUT_START)).any():
-        raise XGBComparisonError("Overlapping validation folds or final-holdout contamination")
+    combined = (
+        pd.concat(all_folds, ignore_index=True)
+        .sort_values("date")
+        .reset_index(drop=True)
+    )
+    if (
+        combined["date"].duplicated().any()
+        or (combined["date"] >= pd.Timestamp(FINAL_HOLDOUT_START)).any()
+    ):
+        raise XGBComparisonError(
+            "Overlapping validation folds or final-holdout contamination"
+        )
     columns = {
         "constant_baseline": "baseline_probability",
         "logistic_3_features": "original_3feature_probability",
@@ -172,7 +231,9 @@ def compare_xgboost_walk_forward(source_csv: str | Path) -> tuple[pd.DataFrame, 
         "xgboost_3_features": "xgboost_3_features_probability",
         "xgboost_6_features": "xgboost_6_features_probability",
     }
-    pooled = {name: _pooled_probability_scores(combined, col) for name, col in columns.items()}
+    pooled = {
+        name: _pooled_probability_scores(combined, col) for name, col in columns.items()
+    }
     report = {
         "scope": "Development-only 2020-2024 walk-forward comparisons; final 2025+ holdout sealed",
         "source_filename": source.name,
@@ -206,12 +267,16 @@ def compare_xgboost_walk_forward(source_csv: str | Path) -> tuple[pd.DataFrame, 
     return combined, report
 
 
-def save_xgboost_walk_forward(source_csv: str | Path, output_dir: str | Path, *, overwrite: bool = False) -> dict:
+def save_xgboost_walk_forward(
+    source_csv: str | Path, output_dir: str | Path, *, overwrite: bool = False
+) -> dict:
     """Write private development predictions and JSON audit, refusing overwrite by default."""
     output = Path(output_dir)
     paths = [output / PREDICTIONS_FILENAME, output / REPORT_FILENAME]
     if not overwrite and any(p.exists() for p in paths):
-        raise XGBComparisonError("Output already exists; choose another folder or use --overwrite")
+        raise XGBComparisonError(
+            "Output already exists; choose another folder or use --overwrite"
+        )
     predictions, report = compare_xgboost_walk_forward(source_csv)
     output.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(dir=output) as tmp:
@@ -219,7 +284,9 @@ def save_xgboost_walk_forward(source_csv: str | Path, output_dir: str | Path, *,
         exported = predictions.copy()
         exported["date"] = exported["date"].dt.strftime("%Y-%m-%d")
         exported.to_csv(stage / PREDICTIONS_FILENAME, index=False, float_format="%.12g")
-        (stage / REPORT_FILENAME).write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+        (stage / REPORT_FILENAME).write_text(
+            json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+        )
         for p in paths:
             (stage / p.name).replace(p)
     return report

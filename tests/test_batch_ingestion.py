@@ -23,15 +23,23 @@ def make_file(folder: Path, name: str, rows: list[str], header: str = HEADER) ->
 
 def fixture_years(tmp_path: Path) -> Path:
     root = tmp_path / "raw"
-    make_file(root, "one.csv", [
-        "NIFTY 50,2024-12-26,100,101,99,100",
-        "NIFTY 50,2024-12-27,100,101,97,98",
-    ])
-    make_file(root, "two.csv", [
-        "NIFTY 50,2024-12-30,98,102,97,100",
-        "NIFTY 50,2025-01-02,100,101,98,99",
-        "NIFTY 50,2025-01-03,99,100,93,94",
-    ])
+    make_file(
+        root,
+        "one.csv",
+        [
+            "NIFTY 50,2024-12-26,100,101,99,100",
+            "NIFTY 50,2024-12-27,100,101,97,98",
+        ],
+    )
+    make_file(
+        root,
+        "two.csv",
+        [
+            "NIFTY 50,2024-12-30,98,102,97,100",
+            "NIFTY 50,2025-01-02,100,101,98,99",
+            "NIFTY 50,2025-01-03,99,100,93,94",
+        ],
+    )
     return root
 
 
@@ -47,9 +55,15 @@ def test_combines_files_and_counts_only_development_events(tmp_path):
     assert events["last_development_session_not_labeled"] == "2024-12-30"
     assert events["by_prediction_year"][0]["eligible_prediction_days"] == 2
     assert pd.read_csv(tmp_path / "out" / "nifty50_ohlc.csv")["date"].tolist() == [
-        "2024-12-26", "2024-12-27", "2024-12-30", "2025-01-02", "2025-01-03"
+        "2024-12-26",
+        "2024-12-27",
+        "2024-12-30",
+        "2025-01-02",
+        "2025-01-03",
     ]
-    saved = json.loads((tmp_path / "out" / "nifty50_event_frequency_development.json").read_text())
+    saved = json.loads(
+        (tmp_path / "out" / "nifty50_event_frequency_development.json").read_text()
+    )
     assert saved == events
     assert "2025" not in str(events["by_prediction_year"])
 
@@ -81,8 +95,12 @@ def test_bad_csv_does_not_create_partial_output(tmp_path):
 
 def test_missing_index_name_requires_explicit_assumption(tmp_path):
     source = tmp_path / "raw"
-    make_file(source, "no_index.csv", ["2024-10-01,100,105,95,102", "2024-10-02,102,107,98,100"],
-              "Date,Open,High,Low,Close\n")
+    make_file(
+        source,
+        "no_index.csv",
+        ["2024-10-01,100,105,95,102", "2024-10-02,102,107,98,100"],
+        "Date,Open,High,Low,Close\n",
+    )
     with pytest.raises(ImportErrorData, match="assume-nifty50"):
         import_nifty50_batch(source, tmp_path / "out")
     audit, _ = import_nifty50_batch(source, tmp_path / "out", assume_nifty50=True)
@@ -91,21 +109,31 @@ def test_missing_index_name_requires_explicit_assumption(tmp_path):
 
 def test_non_nifty_index_is_excluded(tmp_path):
     source = fixture_years(tmp_path)
-    make_file(source, "other.csv", [
-        "NIFTY BANK,2024-03-01,100,105,99,101",
-        "NIFTY 50,2024-10-01,100,105,99,101",
-    ])
+    make_file(
+        source,
+        "other.csv",
+        [
+            "NIFTY BANK,2024-03-01,100,105,99,101",
+            "NIFTY 50,2024-10-01,100,105,99,101",
+        ],
+    )
     audit, _ = import_nifty50_batch(source, tmp_path / "out")
-    selected = next(item for item in audit["input_files"] if item["source_filename"] == "other.csv")
+    selected = next(
+        item for item in audit["input_files"] if item["source_filename"] == "other.csv"
+    )
     assert selected["non_nifty50_rows_excluded"] == 1
 
 
 def test_warns_on_gap_but_does_not_invent_trading_days(tmp_path):
     source = tmp_path / "raw"
-    make_file(source, "first.csv", [
-        "NIFTY 50,2024-01-02,100,103,98,101",
-        "NIFTY 50,2024-02-02,101,103,98,99",
-    ])
+    make_file(
+        source,
+        "first.csv",
+        [
+            "NIFTY 50,2024-01-02,100,103,98,101",
+            "NIFTY 50,2024-02-02,101,103,98,99",
+        ],
+    )
     audit, _ = import_nifty50_batch(source, tmp_path / "out")
     assert len(audit["unusually_long_calendar_gaps"]) == 1
     assert audit["unusually_long_calendar_gaps"][0]["calendar_days_between"] == 31
@@ -153,8 +181,14 @@ def test_no_future_data_features_or_labels_in_event_report(tmp_path):
 
 def test_cli_pass_and_fail_codes(tmp_path):
     source = fixture_years(tmp_path)
-    command = [sys.executable, "-m", "risklens.data.batch_cli", str(source),
-               "--output-dir", str(tmp_path / "out")]
+    command = [
+        sys.executable,
+        "-m",
+        "risklens.data.batch_cli",
+        str(source),
+        "--output-dir",
+        str(tmp_path / "out"),
+    ]
     done = subprocess.run(command, capture_output=True, text=True, check=False)
     assert done.returncode == 0, done.stderr + done.stdout
     assert "PASS: 2 files, 5 unique trading sessions" in done.stdout

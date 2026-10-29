@@ -33,8 +33,7 @@ def _standardize_columns(source: pd.DataFrame) -> pd.DataFrame:
     missing = [name for name in REQUIRED_COLUMNS if name not in table.columns]
     if missing:
         raise OHLCValidationError(
-            f"Missing required columns: {missing}. "
-            f"Expected: {list(REQUIRED_COLUMNS)}."
+            f"Missing required columns: {missing}. Expected: {list(REQUIRED_COLUMNS)}."
         )
     return table
 
@@ -81,7 +80,11 @@ def _parse_prices(values: pd.Series, column: str) -> pd.Series:
 
     without_separators = strings.str.replace(",", "", regex=False)
     numbers = pd.to_numeric(without_separators, errors="coerce")
-    bad = numbers.isna() | ~np.isfinite(numbers.to_numpy(dtype=float, na_value=np.nan)) | (numbers <= 0)
+    bad = (
+        numbers.isna()
+        | ~np.isfinite(numbers.to_numpy(dtype=float, na_value=np.nan))
+        | (numbers <= 0)
+    )
     if bad.any():
         raise OHLCValidationError(
             f"Invalid values in '{column}' at CSV lines {_row_locations(bad)}. "

@@ -11,17 +11,23 @@ def main() -> int:
     )
     parser.add_argument("input_csv", help="Path to the original CSV file")
     parser.add_argument(
-        "--output-dir", default="data/processed", help="Directory for validated CSV and report"
+        "--output-dir",
+        default="data/processed",
+        help="Directory for validated CSV and report",
     )
     parser.add_argument(
-        "--source-page", help="Page where you obtained the data (recorded, not verified)"
+        "--source-page",
+        help="Page where you obtained the data (recorded, not verified)",
     )
     parser.add_argument(
-        "--assume-nifty50", action="store_true",
+        "--assume-nifty50",
+        action="store_true",
         help="Only if the CSV lacks an index column and you verified its identity manually",
     )
     parser.add_argument(
-        "--overwrite", action="store_true", help="Explicitly allow overwriting earlier outputs"
+        "--overwrite",
+        action="store_true",
+        help="Explicitly allow overwriting earlier outputs",
     )
     args = parser.parse_args()
 
