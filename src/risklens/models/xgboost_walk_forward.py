@@ -17,7 +17,7 @@ from xgboost import XGBClassifier
 import xgboost
 
 from risklens.features.dataset import (
-    EXPANDED_FEATURE_COLUMNS, FEATURE_COLUMNS, TARGET_COLUMN,
+    EXPANDED_FEATURE_COLUMNS, FEATURE_COLUMNS, FULL_FEATURE_COLUMNS, TARGET_COLUMN,
     FeatureDatasetError, build_development_features,
 )
 from risklens.models.baselines import _metrics
@@ -64,8 +64,8 @@ def _fit_predict_fixed_xgb(
     There is deliberately no early stopping or eval_set, as that would use the
     reported validation fold for a training-duration decision.
     """
-    if features not in (FEATURE_COLUMNS, EXPANDED_FEATURE_COLUMNS):
-        raise XGBComparisonError("Only the original 3 or predefined 6 features are supported")
+    if features not in (FEATURE_COLUMNS, EXPANDED_FEATURE_COLUMNS, FULL_FEATURE_COLUMNS):
+        raise XGBComparisonError("Only the original 3 or predefined 6 or 9 features are supported")
     x_train = train.loc[:, list(features)].to_numpy(dtype=float)
     y_train = train[TARGET_COLUMN].to_numpy(dtype=int)
     x_valid = validation.loc[:, list(features)].to_numpy(dtype=float)

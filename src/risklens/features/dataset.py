@@ -21,6 +21,8 @@ from risklens.data.validation import OHLCValidationError, load_ohlc_csv
 FEATURE_COLUMNS = ("return_1d", "return_5d", "volatility_20d")
 OHLC_FEATURE_COLUMNS = ("intraday_range", "intraday_return", "opening_gap")
 EXPANDED_FEATURE_COLUMNS = FEATURE_COLUMNS + OHLC_FEATURE_COLUMNS
+TECHNICAL_FEATURE_COLUMNS = ("rsi_14", "ema_50_distance", "volatility_10d")
+FULL_FEATURE_COLUMNS = EXPANDED_FEATURE_COLUMNS + TECHNICAL_FEATURE_COLUMNS
 TARGET_COLUMN = "downside_next_session"
 OUTPUT_NAMES = ("train_features.csv", "validation_features.csv", "feature_dataset_report.json")
 
@@ -52,6 +54,41 @@ def _split_summary(data: pd.DataFrame) -> dict:
     }
 
 
+
+def _wilder_rsi_14(closes: pd.Series) -> pd.Series:
+    """Causal 14-return Wilder RSI, seeded with the first 14 mean gains/losses.
+
+    First value occurs at the 15th close (index 14). With no gains and no
+    losses, RSI is neutral 50; zero losses with gains yields RSI 100.
+    No values from later dates are ever consulted to calculate an earlier RSI.
+    """
+    prices = closes.to_numpy(dtype=float)
+    n = len(prices)
+    values = np.full(n, np.nan, dtype=float)
+    if n < 15:
+        return pd.Series(values, index=closes.index, name="rsi_14")
+    delta = np.diff(prices)
+    gains = np.maximum(delta, 0.0)
+    losses = np.maximum(-delta, 0.0)
+    mean_gain = float(gains[:14].mean())
+    mean_loss = float(losses[:14].mean())
+
+    def score(gain: float, loss: float) -> float:
+        if loss == 0:
+            return 50.0 if gain == 0 else 100.0
+        if gain == 0:
+            return 0.0
+        rs = gain / loss
+        return 100.0 - 100.0 / (1.0 + rs)
+
+    values[14] = score(mean_gain, mean_loss)
+    for i in range(15, n):
+        mean_gain = (mean_gain * 13 + gains[i - 1]) / 14
+        mean_loss = (mean_loss * 13 + losses[i - 1]) / 14
+        values[i] = score(mean_gain, mean_loss)
+    return pd.Series(values, index=closes.index, name="rsi_14")
+
+
 def build_development_features(
     source_csv: str | Path,
     *,
@@ -60,6 +97,7 @@ def build_development_features(
     downside_threshold: float = 0.01,
     sessions_per_year: int = 252,
     include_ohlc_features: bool = False,
+    include_technical_features: bool = False,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     """Return chronological train and validation tables plus an audit report.
 
@@ -74,6 +112,10 @@ def build_development_features(
     hstart = _strict_date(holdout_start, "holdout_start")
     if not isinstance(include_ohlc_features, bool):
         raise FeatureDatasetError("include_ohlc_features must be a boolean")
+    if not isinstance(include_technical_features, bool):
+        raise FeatureDatasetError("include_technical_features must be a boolean")
+    if include_technical_features and not include_ohlc_features:
+        raise FeatureDatasetError("technical features require include_ohlc_features=True for the controlled 6-vs-9 comparison")
     if vstart >= hstart:
         raise FeatureDatasetError("validation_start must precede holdout_start")
     if not isinstance(sessions_per_year, int) or isinstance(sessions_per_year, bool) or sessions_per_year <= 0:
@@ -105,7 +147,19 @@ def build_development_features(
         dev["intraday_return"] = dev["close"] / dev["open"] - 1.0
         dev["opening_gap"] = dev["open"] / dev["close"].shift(1) - 1.0
 
-    active_features = EXPANDED_FEATURE_COLUMNS if include_ohlc_features else FEATURE_COLUMNS
+    if include_technical_features:
+        # All three measurements use only current/earlier sessions. They are
+        # descriptive indicators, not fitted prediction models.
+        dev["rsi_14"] = _wilder_rsi_14(dev["close"])
+        ema = dev["close"].ewm(span=50, adjust=False, min_periods=50).mean()
+        dev["ema_50_distance"] = dev["close"] / ema - 1.0
+        dev["volatility_10d"] = (
+            dev["return_1d"].rolling(window=10, min_periods=10).std(ddof=1)
+            * np.sqrt(sessions_per_year)
+        )
+
+    active_features = (FULL_FEATURE_COLUMNS if include_technical_features else
+                       EXPANDED_FEATURE_COLUMNS if include_ohlc_features else FEATURE_COLUMNS)
 
     # Shifting into the future is permitted ONLY for constructing the label.
     dev["next_session_date"] = dev["date"].shift(-1)
@@ -151,8 +205,15 @@ def build_development_features(
                 "intraday_return": "close[t]/open[t]-1",
                 "opening_gap": "open[t]/close[t-1]-1",
             } if include_ohlc_features else {}),
+            **({
+                "rsi_14": "14-return Wilder RSI, initial mean gain/loss over first 14 returns, causal recursive smoothing",
+                "ema_50_distance": "close[t]/EMA50[t]-1, pandas ewm(span=50, adjust=False, min_periods=50)",
+                "volatility_10d": f"trailing 10-return sample std times sqrt({sessions_per_year})",
+            } if include_technical_features else {}),
         },
         "first_20_price_rows_have_incomplete_feature_history": True,
+        "technical_feature_warmup_price_rows": 49 if include_technical_features else None,
+        "technical_features_requested": include_technical_features,
         "training_boundary_labels_purged": int(((dev["date"] < vstart) & (dev["next_session_date"] >= vstart)).sum()),
         "last_development_price_date_has_no_label": dev["date"].iloc[-1].date().isoformat(),
         "train": _split_summary(train),
@@ -177,11 +238,13 @@ def save_development_features(
     holdout_start: str = "2025-01-01",
     overwrite: bool = False,
     include_ohlc_features: bool = False,
+    include_technical_features: bool = False,
 ) -> dict:
     """Write two development-only model-ready tables and a transparent report."""
     train, valid, report = build_development_features(
         source_csv, validation_start=validation_start, holdout_start=holdout_start,
         include_ohlc_features=include_ohlc_features,
+        include_technical_features=include_technical_features,
     )
     destination = Path(output_dir)
     paths = [destination / name for name in OUTPUT_NAMES]
