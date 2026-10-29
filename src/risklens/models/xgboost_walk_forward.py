@@ -26,6 +26,9 @@ from risklens.models.ohlc_comparison import (
 )
 from risklens.models.walk_forward import FOLD_YEARS, FINAL_HOLDOUT_START
 
+EXTERNAL_FEATURE_COLUMNS = ("india_vix_level", "sp500_previous_return_1d")
+MULTIFACTOR_FEATURE_COLUMNS = FULL_FEATURE_COLUMNS + EXTERNAL_FEATURE_COLUMNS
+
 PREDICTIONS_FILENAME = "xgboost_walk_forward_predictions.csv"
 REPORT_FILENAME = "xgboost_walk_forward_report.json"
 
@@ -64,8 +67,8 @@ def _fit_predict_fixed_xgb(
     There is deliberately no early stopping or eval_set, as that would use the
     reported validation fold for a training-duration decision.
     """
-    if features not in (FEATURE_COLUMNS, EXPANDED_FEATURE_COLUMNS, FULL_FEATURE_COLUMNS):
-        raise XGBComparisonError("Only the original 3 or predefined 6 or 9 features are supported")
+    if features not in (FEATURE_COLUMNS, EXPANDED_FEATURE_COLUMNS, FULL_FEATURE_COLUMNS, MULTIFACTOR_FEATURE_COLUMNS):
+        raise XGBComparisonError("Only the original 3 or predefined 6, 9 or 11 feature sets are supported")
     x_train = train.loc[:, list(features)].to_numpy(dtype=float)
     y_train = train[TARGET_COLUMN].to_numpy(dtype=int)
     x_valid = validation.loc[:, list(features)].to_numpy(dtype=float)
