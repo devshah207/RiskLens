@@ -65,10 +65,45 @@ def build_parser() -> argparse.ArgumentParser:
     frozen.add_argument("--device", choices=("auto", "cpu", "mps"), default="auto")
     frozen.add_argument("--output-dir", default="data/processed/phase4_validation")
     frozen.add_argument("--overwrite", action="store_true")
+    validation = sub.add_parser(
+        "validate-risk",
+        help="Phase 5 development-only validation of frozen predictions and historical VaR",
+    )
+    validation.add_argument(
+        "--predictions",
+        default="data/processed/phase4_validation/frozen_model_predictions.csv",
+    )
+    validation.add_argument(
+        "--var-backtest",
+        default="data/processed/citi_validation/historical_var_backtest.csv",
+    )
+    validation.add_argument("--output-dir", default="data/processed/phase5_validation")
+    validation.add_argument("--bootstrap-samples", type=int, default=1000)
+    validation.add_argument("--block-length", type=int, default=10)
+    validation.add_argument("--overwrite", action="store_true")
     return p
 
 
 def run(args: argparse.Namespace) -> int:
+    if args.command == "validate-risk":
+        from risklens.evaluation.risk_validation import save_risk_validation
+
+        report = save_risk_validation(
+            args.predictions,
+            args.var_backtest,
+            args.output_dir,
+            overwrite=args.overwrite,
+            n_resamples=args.bootstrap_samples,
+            block_length=args.block_length,
+        )
+        print(
+            "PASS: development diagnostics,",
+            report["observations"],
+            "aligned observations; 2025+ holdout sealed",
+        )
+        print("Report:", Path(args.output_dir) / "risk_validation_report.md")
+        return 0
+
     if args.command == "evaluate-frozen":
         from risklens.models.frozen_comparison import save_frozen_comparison
 
