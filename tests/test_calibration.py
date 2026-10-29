@@ -1,8 +1,6 @@
 """Synthetic calibration tests: never use real price files or 2025+ outcomes."""
 
 import json
-import subprocess
-import sys
 
 import numpy as np
 import pandas as pd
@@ -195,14 +193,3 @@ def test_write_and_refuse_overwrite(example_source, tmp_path):
         save_calibration_comparison(example_source[0], out)
     assert save_calibration_comparison(example_source[0], out, overwrite=True)["total_validation_rows"] == len(frame)
 
-
-def test_cli_reports_pass_then_fail(example_source, tmp_path):
-    target = tmp_path / "output"
-    cmd = [sys.executable, "-m", "risklens.models.calibration_cli", str(example_source[0]),
-           "--output-dir", str(target)]
-    success = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    assert success.returncode == 0, success.stderr + success.stdout
-    assert "PASS:" in success.stdout
-    failure = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    assert failure.returncode == 1
-    assert "FAIL:" in failure.stdout

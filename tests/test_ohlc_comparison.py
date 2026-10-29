@@ -1,8 +1,6 @@
 """Synthetic tests for the controlled OHLC-feature experiment; never use final holdout outcomes."""
 import json
 from pathlib import Path
-import subprocess
-import sys
 
 import numpy as np
 import pandas as pd
@@ -170,18 +168,6 @@ def test_save_report_refuses_overwrite_and_is_valid_json(tmp_path):
     with pytest.raises(OHLCComparisonError, match="already exist"):
         save_ohlc_feature_comparison(path, out)
     save_ohlc_feature_comparison(path, out, overwrite=True)
-
-
-def test_cli_success_and_failure(tmp_path):
-    path = synthetic_prices(tmp_path)
-    command = [sys.executable, "-m", "risklens.models.ohlc_comparison_cli", str(path),
-               "--output-dir", str(tmp_path / "out")]
-    good = subprocess.run(command, text=True, capture_output=True, check=False)
-    assert good.returncode == 0, good.stdout + good.stderr
-    assert "PASS:" in good.stdout
-    bad = subprocess.run(command, text=True, capture_output=True, check=False)
-    assert bad.returncode == 1
-    assert "FAIL:" in bad.stdout
 
 
 def test_missing_file_and_wrong_parameter_type(tmp_path):

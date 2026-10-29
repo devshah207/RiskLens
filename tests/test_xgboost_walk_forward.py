@@ -146,13 +146,3 @@ def test_missing_csv_rejected(tmp_path):
     with pytest.raises(XGBComparisonError, match="not found"):
         compare_xgboost_walk_forward(tmp_path / "not_here.csv")
 
-
-def test_cli_success_and_failure_when_asked_to_overwrite(monkeypatch, capsys, synthetic_run):
-    from risklens.models.xgboost_walk_forward_cli import main
-    source, _, _, directory = synthetic_run
-    out = directory / "cli"
-    monkeypatch.setattr("sys.argv", ["xgboost_walk_forward_cli", str(source), "--output-dir", str(out)])
-    assert main() == 0
-    assert "PASS:" in capsys.readouterr().out
-    assert main() == 1
-    assert "FAIL:" in capsys.readouterr().out

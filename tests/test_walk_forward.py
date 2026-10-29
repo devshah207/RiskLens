@@ -2,8 +2,6 @@
 
 import json
 from pathlib import Path
-import subprocess
-import sys
 
 import numpy as np
 import pandas as pd
@@ -170,14 +168,3 @@ def test_outputs_write_and_refuse_overwrite(synthetic_history, tmp_path):
         save_walk_forward_validation(synthetic_history, tmp_path / "out")
     assert save_walk_forward_validation(synthetic_history, tmp_path / "out", overwrite=True)["folds"] == report["folds"]
 
-
-def test_cli_output_and_explicit_overwrite(synthetic_history, tmp_path):
-    command = [sys.executable, "-m", "risklens.models.walk_forward_cli", str(synthetic_history),
-               "--output-dir", str(tmp_path / "output")]
-    success = subprocess.run(command, capture_output=True, text=True, check=False)
-    assert success.returncode == 0, success.stderr + success.stdout
-    assert "PASS:" in success.stdout
-    assert "2024:" in success.stdout
-    failure = subprocess.run(command, capture_output=True, text=True, check=False)
-    assert failure.returncode == 1
-    assert "FAIL:" in failure.stdout

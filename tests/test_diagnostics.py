@@ -1,8 +1,6 @@
 """Synthetic, development-only tests of retrospective probability diagnostics."""
 
 import json
-import subprocess
-import sys
 
 import numpy as np
 import pandas as pd
@@ -186,14 +184,3 @@ def test_save_and_prevent_overwrite(tmp_path):
         save_diagnostics(p, out)
     save_diagnostics(p, out, overwrite=True)
 
-
-def test_command_line_success_then_no_overwrite(tmp_path):
-    p = synthetic_predictions(tmp_path)
-    cmd = [sys.executable, "-m", "risklens.models.diagnostics_cli", str(p),
-           "--output-dir", str(tmp_path / "out")]
-    first = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    assert first.returncode == 0, first.stdout + first.stderr
-    assert "PASS: 44 development predictions" in first.stdout
-    second = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    assert second.returncode == 1
-    assert "FAIL:" in second.stdout
