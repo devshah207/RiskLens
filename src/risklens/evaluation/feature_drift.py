@@ -56,14 +56,14 @@ def _feature_psi(dev: np.ndarray, hold: np.ndarray) -> tuple[float, int]:
     return float(np.sum((q-p) * np.log(q/p))), k
 
 
-def evaluate_feature_drift(
+def load_feature_frames(
     nifty_csv: str | Path,
     development_external_csv: str | Path,
     vix_csv: str | Path,
     sp500_csv: str | Path,
     holdout_predictions_csv: str | Path,
-) -> tuple[pd.DataFrame, dict]:
-    """Report descriptive feature drift; do not refit/re-evaluate either ML model."""
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict]:
+    """Reuse exact original feature reconstruction and scored-date alignment."""
     holdout = _read_predictions(holdout_predictions_csv, holdout=True)
     history, source_audit = build_causal_history(nifty_csv, development_external_csv)
     if (history.date >= pd.Timestamp("2025-01-01")).any():
@@ -86,7 +86,10 @@ def evaluate_feature_drift(
     # Evaluate only dates that the original one-time model scoring accepted;
     # never explore alternative subsets based on labels or performance.
     feature_rows = holdout[["date"]].merge(
-        attached[["date", *FEATURES]], on="date", how="left", validate="one_to_one"
+        attached[[
+            "date", *FEATURES,
+            *[c for c in ("vix_source_date", "sp500_source_date") if c in attached],
+        ]], on="date", how="left", validate="one_to_one"
     )
     if not feature_rows.date.equals(holdout.date):
         raise FeatureDriftError("Holdout feature reconstruction order mismatch")
@@ -95,6 +98,32 @@ def evaluate_feature_drift(
     for column in FEATURES:
         if not np.isfinite(feature_rows[column].to_numpy(dtype=float)).all():
             raise FeatureDriftError(f"Nonfinite holdout feature {column}")
+
+    audits = {
+        "development_source_audit": source_audit,
+        "holdout_alignment_audit": alignment,
+        "holdout_vix_audit": vix_audit,
+        "holdout_sp500_audit": sp_audit,
+    }
+    return dev, feature_rows, holdout, audits
+
+
+def evaluate_feature_drift(
+    nifty_csv: str | Path,
+    development_external_csv: str | Path,
+    vix_csv: str | Path,
+    sp500_csv: str | Path,
+    holdout_predictions_csv: str | Path,
+) -> tuple[pd.DataFrame, dict]:
+    """Report descriptive feature drift; do not refit/re-evaluate either ML model."""
+    dev, feature_rows, holdout, audits = load_feature_frames(
+        nifty_csv, development_external_csv, vix_csv, sp500_csv,
+        holdout_predictions_csv,
+    )
+    source_audit = audits["development_source_audit"]
+    alignment = audits["holdout_alignment_audit"]
+    vix_audit = audits["holdout_vix_audit"]
+    sp500_audit = audits["holdout_sp500_audit"]
 
     rows = []
     for name in FEATURES:
