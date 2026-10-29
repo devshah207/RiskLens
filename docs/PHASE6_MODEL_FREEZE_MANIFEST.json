@@ -120,7 +120,7 @@
     "data/processed/external/nifty50_external_development.csv": "7338b193c0641ee94ee8fc6e3a1ffb5e3823d36b24aafbd81a01831c6e246167",
     "data/processed/holdout_sources/india_vix_2024_2026.csv": "4782afd724bcb51a3c690807f3b1b61aac9b4c24a36c402162b3075539d9682d",
     "data/raw/sp500/sp500_daily.csv": "b8c00565b6d13bd5ea72d65bb057d526ed4757b8d2da2988ea6b2a9228f3a9a6",
-    "data/processed/optuna_search/optuna_studies.sqlite3": "87c8c4ddb256918cf8a278f7e5deeca8c3300bee8a2e14bc18e06749eb561e",
+    "data/processed/optuna_search/optuna_studies.sqlite3": "87c8c4ddb256918cf8a278f7e5deeca8c3300bee8eea2e14bc18e06749eb561e",
     "data/processed/phase6_governance/RiskLens_VaR_Independent_Reconstruction.csv": "691f51a48e254aacd22170b653f4fcaae4ff5f460abf51824d009a5e2f9a4723"
   },
   "code_provenance": {

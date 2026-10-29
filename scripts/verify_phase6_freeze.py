@@ -30,6 +30,12 @@ def main() -> int:
         return 1
 
     failures = []
+    optuna_path = "data/processed/optuna_search/optuna_studies.sqlite3"
+    if manifest["protected_file_sha256"].get(optuna_path) != manifest["challenger"]["trial_db_sha256"]:
+        failures.append(
+            "MANIFEST INCONSISTENCY: protected Optuna SHA256 disagrees "
+            "with challenger.trial_db_sha256"
+        )
     checked = 0
     for relative, expected in manifest["protected_file_sha256"].items():
         path = root / relative
@@ -49,7 +55,9 @@ def main() -> int:
             checked += 1
 
     report_path = root / "data/processed/phase5_final_holdout/final_holdout_report.json"
-    if report_path.is_file():
+    if not report_path.is_file():
+        failures.append(f"MISSING: {report_path.relative_to(root)}")
+    else:
         try:
             report = json.loads(report_path.read_text(encoding="utf-8"))
             contracts = {
@@ -72,6 +80,10 @@ def main() -> int:
                 "lstm_trial": (
                     report["study_record"]["trial_number"]
                     == manifest["challenger"]["trial_number"]
+                ),
+                "optuna_study_sha256": (
+                    report["study_record"]["database_sha256"]
+                    == manifest["challenger"]["trial_db_sha256"]
                 ),
                 "holdout_rows": (
                     report["eligible_holdout_rows"] == manifest["holdout"]["rows"]
