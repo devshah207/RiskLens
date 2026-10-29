@@ -40,7 +40,8 @@ def _development_only_edges(values: np.ndarray) -> np.ndarray:
     # -/+ infinity makes out-of-development-range holdout values auditable,
     # rather than excluded by histogram's finite bin bounds.
     if len(boundaries) == 1:
-        return np.asarray([-np.inf, boundaries[0], np.inf], dtype=float)
+        point = float(boundaries[0])
+        return np.asarray([-np.inf, point, np.nextafter(point, np.inf), np.inf])
     interior = boundaries[1:-1]
     return np.concatenate(([-np.inf], interior, [np.inf]))
 

@@ -18,7 +18,7 @@ def test_constant_development_feature_handles_collapsed_bins():
     baseline = np.ones(100)
     future = np.full(40, 1.5)
     value, bins = feature_drift._feature_psi(baseline, future)
-    assert bins == 2
+    assert bins == 3
     assert np.isfinite(value)
     assert value > 0
 
