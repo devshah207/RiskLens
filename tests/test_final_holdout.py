@@ -92,7 +92,6 @@ def test_synthetic_full_holdout_pipeline(tmp_path, monkeypatch):
     age = (dt - prev).dt.days
     dev_mask = dates < pd.Timestamp("2025-01-01")
     dev = nifty.loc[dev_mask].copy().reset_index(drop=True)
-    dev_dt = dt[dev_mask].reset_index(drop=True)
     dev_prev = prev[dev_mask].reset_index(drop=True)
     dev_age = age[dev_mask].reset_index(drop=True)
     dev["vix_source_date"] = dev_prev.dt.strftime("%Y-%m-%d")
