@@ -10,10 +10,9 @@ import argparse
 import json
 from pathlib import Path
 import random
-import warnings
 import numpy as np
 import pandas as pd
-from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.metrics import roc_auc_score
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 from risklens.features.dataset import build_development_features, TARGET_COLUMN
@@ -267,7 +266,6 @@ def optimize(nifty, external, output, *, xgb_trials=200, lstm_trials=60, device=
             trial.set_user_attr("tuning_per_year", per)
             return score
 
-        before = len(study.trials)
         study.optimize(
             obj, n_trials=num, show_progress_bar=False, catch=(RuntimeError,)
         )

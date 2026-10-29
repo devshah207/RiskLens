@@ -9,7 +9,6 @@ from pathlib import Path
 import subprocess
 import sys
 
-import numpy as np
 import pandas as pd
 import pytest
 

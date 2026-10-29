@@ -6,7 +6,6 @@ The 2025+ final holdout is never analyzed or predicted in this module.
 """
 
 from datetime import datetime, timezone
-from hashlib import sha256
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -14,7 +13,6 @@ from tempfile import TemporaryDirectory
 import numpy as np
 import pandas as pd
 
-from risklens.data.validation import OHLCValidationError, load_ohlc_csv
 from risklens.features.dataset import (
     FULL_FEATURE_COLUMNS,
     TARGET_COLUMN,
@@ -32,15 +30,17 @@ from risklens.models.xgboost_walk_forward import (
     _fit_predict_fixed_xgb,
 )
 
-PREDICTIONS_FILENAME = "multifactor_comparison_predictions.csv"
-REPORT_FILENAME = "multifactor_comparison_report.json"
 # Backwards-compatible names retained for existing research scripts and tests.
 from risklens.evaluation.integrated_validation import (
-    MAX_EXTERNAL_AGE_DAYS,
+    MAX_EXTERNAL_AGE_DAYS as MAX_EXTERNAL_AGE_DAYS,
     MultiFactorComparisonError,
-    _strict_iso_dates,
+    _strict_iso_dates as _strict_iso_dates,
     _validate_integrated,
 )
+
+
+PREDICTIONS_FILENAME = "multifactor_comparison_predictions.csv"
+REPORT_FILENAME = "multifactor_comparison_report.json"
 
 
 def compare_multifactor_features(

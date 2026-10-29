@@ -1,7 +1,6 @@
 """Synthetic checks for year-by-year expanding-window model evaluation."""
 
 import json
-from pathlib import Path
 
 import numpy as np
 import pandas as pd

@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 from risklens.models.optuna_research import (
     brier,
     xgb_space,

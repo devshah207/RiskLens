@@ -1,8 +1,5 @@
 """Smoke and routing tests for the unified CLI. No network or market data needed."""
 
-import argparse
-import sys
-from types import ModuleType
 from unittest.mock import Mock
 
 import pytest

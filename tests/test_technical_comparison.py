@@ -91,8 +91,8 @@ def test_wilder_rsi_recursive_update_matches_manual_formula():
     )
     delta = np.diff(prices.to_numpy())
     g = np.maximum(delta, 0)
-    l = np.maximum(-delta, 0)
-    avg_g, avg_l = g[:14].mean(), l[:14].mean()
+    losses = np.maximum(-delta, 0)
+    avg_g, avg_l = g[:14].mean(), losses[:14].mean()
     expected_first = 100 - 100 / (1 + avg_g / avg_l)
     avg_g = (13 * avg_g + g[14]) / 14
     avg_l = (13 * avg_l + l[14]) / 14

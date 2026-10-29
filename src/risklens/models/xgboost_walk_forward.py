@@ -26,7 +26,7 @@ from risklens.features.dataset import (
 )
 from risklens.evaluation.metrics import _metrics, _pooled_probability_scores
 from risklens.evaluation.features import (
-    EXTERNAL_FEATURE_COLUMNS,
+    EXTERNAL_FEATURE_COLUMNS as EXTERNAL_FEATURE_COLUMNS,
     MULTIFACTOR_FEATURE_COLUMNS,
 )
 from risklens.models.ohlc_comparison import (

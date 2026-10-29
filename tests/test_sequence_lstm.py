@@ -1,7 +1,5 @@
 """Leakage and reproducibility checks for LSTM and VaR research components."""
 
-import json
-from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
@@ -16,8 +14,6 @@ from risklens.models.sequence_lstm import (
     SequenceModelError,
     render_dashboard,
 )
-from risklens.models.market_risk_monitor import backtest_historical_var
-from risklens.models.xgboost_walk_forward import MULTIFACTOR_FEATURE_COLUMNS
 
 
 def history_frame(n=45):

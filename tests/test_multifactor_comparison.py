@@ -20,7 +20,6 @@ from risklens.models.xgboost_walk_forward import (
     FULL_FEATURE_COLUMNS,
     EXTERNAL_FEATURE_COLUMNS,
     MULTIFACTOR_FEATURE_COLUMNS,
-    _fit_predict_fixed_xgb,
 )
 
 
@@ -304,3 +303,5 @@ def test_file_export_and_overwrite_protection(tmp_path):
     assert preds["date"].max() < "2025-01-01"
     with pytest.raises(MultiFactorComparisonError, match="already exist"):
         save_multifactor_comparison(src, ext, out)
+
+
