@@ -1,7 +1,7 @@
 name: RiskLens quality checks
 on:
   push:
-    branches: [main, "feature/**"]
+    branches: [main, "feature/**", "experiment/**"]
   pull_request:
     branches: [main]
 permissions:
