@@ -16,9 +16,9 @@ from sklearn.metrics import roc_auc_score, average_precision_score
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 from risklens.features.dataset import build_development_features, TARGET_COLUMN
-from risklens.models.xgboost_walk_forward import MULTIFACTOR_FEATURE_COLUMNS
+from risklens.evaluation.features import MULTIFACTOR_FEATURE_COLUMNS
 from risklens.models.sequence_lstm import build_causal_history, make_sequences
-from risklens.models.walk_forward import FINAL_HOLDOUT_START
+from risklens.evaluation.splits import FINAL_HOLDOUT_START
 
 TUNING_YEARS=(2020,2021,2022)
 DIAGNOSTIC_YEARS=(2023,2024)

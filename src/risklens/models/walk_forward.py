@@ -17,11 +17,10 @@ from tempfile import TemporaryDirectory
 import numpy as np
 import pandas as pd
 
+from risklens.evaluation.splits import FOLD_YEARS, FINAL_HOLDOUT_START
 from risklens.features.dataset import FeatureDatasetError, build_development_features
 from risklens.models.baselines import ModelInputError, compare_models
 
-FOLD_YEARS = (2020, 2021, 2022, 2023, 2024)
-FINAL_HOLDOUT_START = "2025-01-01"
 PREDICTIONS_FILENAME = "walk_forward_validation_predictions.csv"
 REPORT_FILENAME = "walk_forward_validation_report.json"
 

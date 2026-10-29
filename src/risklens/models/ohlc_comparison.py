@@ -17,6 +17,7 @@ from risklens.features.dataset import (
     FeatureDatasetError, EXPANDED_FEATURE_COLUMNS, FEATURE_COLUMNS,
     build_development_features,
 )
+from risklens.evaluation.metrics import _pooled_probability_scores
 from risklens.models.baselines import ModelInputError, compare_models
 from risklens.models.walk_forward import (
     FOLD_YEARS, FINAL_HOLDOUT_START, WalkForwardError, walk_forward_validation,
@@ -29,16 +30,6 @@ REPORT_FILENAME = "ohlc_feature_comparison_report.json"
 class OHLCComparisonError(ValueError):
     """Raised when the controlled feature-set comparison cannot be completed."""
 
-
-def _pooled_probability_scores(frame: pd.DataFrame, col: str) -> dict:
-    """Compute proper probability scores on the same pooled fold observations."""
-    y = frame["actual_downside_event"].to_numpy(dtype=int)
-    p = frame[col].to_numpy(dtype=float)
-    clipped = np.clip(p, np.finfo(float).eps, 1.0 - np.finfo(float).eps)
-    return {
-        "brier_score": round(float(np.mean((p - y) ** 2)), 8),
-        "log_loss": round(float(-np.mean(y * np.log(clipped) + (1 - y) * np.log1p(-clipped))), 8),
-    }
 
 
 def compare_ohlc_features(source_csv: str | Path) -> tuple[pd.DataFrame, dict]:

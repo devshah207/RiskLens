@@ -17,9 +17,9 @@ from risklens.features.dataset import (
     EXPANDED_FEATURE_COLUMNS, FULL_FEATURE_COLUMNS, TARGET_COLUMN,
     FeatureDatasetError, build_development_features,
 )
-from risklens.models.baselines import _metrics
-from risklens.models.ohlc_comparison import _pooled_probability_scores
-from risklens.models.walk_forward import FOLD_YEARS, FINAL_HOLDOUT_START
+from risklens.evaluation.metrics import _metrics
+from risklens.evaluation.metrics import _pooled_probability_scores
+from risklens.evaluation.splits import FOLD_YEARS, FINAL_HOLDOUT_START
 from risklens.models.xgboost_walk_forward import (
     FIXED_XGB_PARAMS, _fit_predict_fixed_xgb, XGBComparisonError,
 )

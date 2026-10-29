@@ -29,6 +29,7 @@ from sklearn.metrics import (
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from risklens.evaluation.metrics import _metrics
 from risklens.features.dataset import FEATURE_COLUMNS, EXPANDED_FEATURE_COLUMNS, TARGET_COLUMN
 
 EXPECTED_COLUMNS = ("date", *FEATURE_COLUMNS, TARGET_COLUMN)
@@ -88,26 +89,6 @@ def _read_split(
     frame["date"] = dates
     return frame
 
-
-def _metrics(y_true: np.ndarray, probabilities: np.ndarray) -> dict:
-    """Fixed-threshold diagnostics plus threshold-free ranking and probability scores."""
-    labels = (probabilities >= FIXED_THRESHOLD).astype(int)
-    tn, fp, fn, tp = (int(x) for x in confusion_matrix(y_true, labels, labels=[0, 1]).ravel())
-    two_classes = len(np.unique(y_true)) == 2
-    return {
-        "roc_auc": round(float(roc_auc_score(y_true, probabilities)), 8) if two_classes else None,
-        "average_precision": round(float(average_precision_score(y_true, probabilities)), 8) if two_classes else None,
-        "brier_score": round(float(brier_score_loss(y_true, probabilities)), 8),
-        "log_loss": round(float(log_loss(y_true, probabilities, labels=[0, 1])), 8),
-        "threshold": FIXED_THRESHOLD,
-        "precision_at_threshold": round(float(precision_score(y_true, labels, zero_division=0)), 8),
-        "recall_at_threshold": round(float(recall_score(y_true, labels, zero_division=0)), 8),
-        "confusion_matrix": {"tn": tn, "fp": fp, "fn": fn, "tp": tp},
-        "warning": (
-            "ROC-AUC and AP are undefined for a one-class validation sample"
-            if not two_classes else None
-        ),
-    }
 
 
 def compare_models(

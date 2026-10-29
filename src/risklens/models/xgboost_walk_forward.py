@@ -20,14 +20,13 @@ from risklens.features.dataset import (
     EXPANDED_FEATURE_COLUMNS, FEATURE_COLUMNS, FULL_FEATURE_COLUMNS, TARGET_COLUMN,
     FeatureDatasetError, build_development_features,
 )
-from risklens.models.baselines import _metrics
+from risklens.evaluation.metrics import _metrics, _pooled_probability_scores
+from risklens.evaluation.features import EXTERNAL_FEATURE_COLUMNS, MULTIFACTOR_FEATURE_COLUMNS
 from risklens.models.ohlc_comparison import (
-    OHLCComparisonError, _pooled_probability_scores, compare_ohlc_features,
+    OHLCComparisonError, compare_ohlc_features,
 )
-from risklens.models.walk_forward import FOLD_YEARS, FINAL_HOLDOUT_START
+from risklens.evaluation.splits import FOLD_YEARS, FINAL_HOLDOUT_START
 
-EXTERNAL_FEATURE_COLUMNS = ("india_vix_level", "sp500_previous_return_1d")
-MULTIFACTOR_FEATURE_COLUMNS = FULL_FEATURE_COLUMNS + EXTERNAL_FEATURE_COLUMNS
 
 PREDICTIONS_FILENAME = "xgboost_walk_forward_predictions.csv"
 REPORT_FILENAME = "xgboost_walk_forward_report.json"

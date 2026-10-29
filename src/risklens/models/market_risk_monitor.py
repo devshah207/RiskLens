@@ -16,7 +16,7 @@ from scipy.stats import binomtest
 
 from risklens.data.validation import load_ohlc_csv
 from risklens.models.sequence_lstm import _check_reference, SequenceModelError
-from risklens.models.walk_forward import FINAL_HOLDOUT_START
+from risklens.evaluation.splits import FINAL_HOLDOUT_START
 
 WINDOW=250
 
