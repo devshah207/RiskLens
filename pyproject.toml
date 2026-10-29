@@ -18,6 +18,7 @@ tuning = ["optuna>=4,<5", "torch>=2.2,<3"]
 
 [project.scripts]
 risklens-validate = "risklens.data.cli:main"
+risklens = "risklens.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
