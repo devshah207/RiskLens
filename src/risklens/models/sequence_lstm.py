@@ -22,7 +22,7 @@ from risklens.data.validation import load_ohlc_csv
 from risklens.features.dataset import (
     FULL_FEATURE_COLUMNS, TARGET_COLUMN, _wilder_rsi_14, build_development_features,
 )
-from risklens.models.multifactor_comparison import _validate_integrated
+from risklens.evaluation.integrated_validation import _validate_integrated
 from risklens.evaluation.metrics import _pooled_probability_scores
 from risklens.evaluation.metrics import _metrics
 from risklens.evaluation.splits import FOLD_YEARS, FINAL_HOLDOUT_START
