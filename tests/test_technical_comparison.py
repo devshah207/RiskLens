@@ -95,7 +95,7 @@ def test_wilder_rsi_recursive_update_matches_manual_formula():
     avg_g, avg_l = g[:14].mean(), losses[:14].mean()
     expected_first = 100 - 100 / (1 + avg_g / avg_l)
     avg_g = (13 * avg_g + g[14]) / 14
-    avg_l = (13 * avg_l + l[14]) / 14
+    avg_l = (13 * avg_l + losses[14]) / 14
     expected_second = 100 - 100 / (1 + avg_g / avg_l)
     result = _wilder_rsi_14(prices)
     assert result.iloc[14] == pytest.approx(expected_first)
