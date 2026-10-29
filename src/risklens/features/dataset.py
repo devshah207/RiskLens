@@ -19,6 +19,8 @@ from risklens.data.validation import OHLCValidationError, load_ohlc_csv
 
 
 FEATURE_COLUMNS = ("return_1d", "return_5d", "volatility_20d")
+OHLC_FEATURE_COLUMNS = ("intraday_range", "intraday_return", "opening_gap")
+EXPANDED_FEATURE_COLUMNS = FEATURE_COLUMNS + OHLC_FEATURE_COLUMNS
 TARGET_COLUMN = "downside_next_session"
 OUTPUT_NAMES = ("train_features.csv", "validation_features.csv", "feature_dataset_report.json")
 
@@ -57,9 +59,12 @@ def build_development_features(
     holdout_start: str = "2025-01-01",
     downside_threshold: float = 0.01,
     sessions_per_year: int = 252,
+    include_ohlc_features: bool = False,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     """Return chronological train and validation tables plus an audit report.
 
+    The optional OHLC predictors use only current-session or earlier prices.
+    Default behavior is unchanged: the original three closing-price features.
     Output columns: prediction date; 1-session/5-session trailing simple returns;
     trailing 20-return annualized sample volatility; historical binary target.
     A date t is labeled only when the following observed trading session is
@@ -67,6 +72,8 @@ def build_development_features(
     """
     vstart = _strict_date(validation_start, "validation_start")
     hstart = _strict_date(holdout_start, "holdout_start")
+    if not isinstance(include_ohlc_features, bool):
+        raise FeatureDatasetError("include_ohlc_features must be a boolean")
     if vstart >= hstart:
         raise FeatureDatasetError("validation_start must precede holdout_start")
     if not isinstance(sessions_per_year, int) or isinstance(sessions_per_year, bool) or sessions_per_year <= 0:
@@ -80,7 +87,7 @@ def build_development_features(
         raise FeatureDatasetError(str(exc)) from exc
 
     # Seal the final holdout BEFORE calculating any returns, features or labels.
-    dev = prices.loc[prices["date"] < hstart, ["date", "close"]].copy().reset_index(drop=True)
+    dev = prices.loc[prices["date"] < hstart, ["date", "open", "high", "low", "close"]].copy().reset_index(drop=True)
     if len(dev) < 22:  # 21 closes for 20 returns, plus one later close for a label.
         raise FeatureDatasetError("Need at least 22 development price rows for 20-return volatility and a next-session label")
 
@@ -92,6 +99,14 @@ def build_development_features(
         * np.sqrt(sessions_per_year)
     )
 
+    # Intraday features are known after today closes, never use tomorrow's OHLC.
+    if include_ohlc_features:
+        dev["intraday_range"] = (dev["high"] - dev["low"]) / dev["open"]
+        dev["intraday_return"] = dev["close"] / dev["open"] - 1.0
+        dev["opening_gap"] = dev["open"] / dev["close"].shift(1) - 1.0
+
+    active_features = EXPANDED_FEATURE_COLUMNS if include_ohlc_features else FEATURE_COLUMNS
+
     # Shifting into the future is permitted ONLY for constructing the label.
     dev["next_session_date"] = dev["date"].shift(-1)
     next_close = dev["close"].shift(-1)
@@ -101,11 +116,11 @@ def build_development_features(
     target.loc[has_label] = (next_return <= -downside_threshold).astype("int8")
     dev[TARGET_COLUMN] = target
 
-    ready_features = dev[list(FEATURE_COLUMNS)].notna().all(axis=1)
+    ready_features = dev[list(active_features)].notna().all(axis=1)
     # Boundary purge: a prediction from 2022 cannot learn a label observed in 2023.
     training = (dev["date"] < vstart) & (dev["next_session_date"] < vstart)
     validation = (dev["date"] >= vstart) & (dev["next_session_date"] < hstart)
-    columns = ["date", *FEATURE_COLUMNS, TARGET_COLUMN]
+    columns = ["date", *active_features, TARGET_COLUMN]
     train = dev.loc[training & ready_features, columns].copy().reset_index(drop=True)
     valid = dev.loc[validation & ready_features, columns].copy().reset_index(drop=True)
 
@@ -126,11 +141,16 @@ def build_development_features(
         "holdout_start": hstart.date().isoformat(),
         "target_column": TARGET_COLUMN,
         "target_definition": f"1 when next observed session simple return <= -{downside_threshold:.4f}; else 0",
-        "feature_columns": list(FEATURE_COLUMNS),
+        "feature_columns": list(active_features),
         "feature_definitions": {
             "return_1d": "close[t]/close[t-1] - 1",
             "return_5d": "close[t]/close[t-5] - 1",
             "volatility_20d": f"sample standard deviation of returns[t-19:t] times sqrt({sessions_per_year})",
+            **({
+                "intraday_range": "(high[t]-low[t])/open[t]",
+                "intraday_return": "close[t]/open[t]-1",
+                "opening_gap": "open[t]/close[t-1]-1",
+            } if include_ohlc_features else {}),
         },
         "first_20_price_rows_have_incomplete_feature_history": True,
         "training_boundary_labels_purged": int(((dev["date"] < vstart) & (dev["next_session_date"] >= vstart)).sum()),
@@ -156,10 +176,12 @@ def save_development_features(
     validation_start: str = "2023-01-01",
     holdout_start: str = "2025-01-01",
     overwrite: bool = False,
+    include_ohlc_features: bool = False,
 ) -> dict:
     """Write two development-only model-ready tables and a transparent report."""
     train, valid, report = build_development_features(
-        source_csv, validation_start=validation_start, holdout_start=holdout_start
+        source_csv, validation_start=validation_start, holdout_start=holdout_start,
+        include_ohlc_features=include_ohlc_features,
     )
     destination = Path(output_dir)
     paths = [destination / name for name in OUTPUT_NAMES]

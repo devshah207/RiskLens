@@ -29,7 +29,7 @@ from sklearn.metrics import (
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from risklens.features.dataset import FEATURE_COLUMNS, TARGET_COLUMN
+from risklens.features.dataset import FEATURE_COLUMNS, EXPANDED_FEATURE_COLUMNS, TARGET_COLUMN
 
 EXPECTED_COLUMNS = ("date", *FEATURE_COLUMNS, TARGET_COLUMN)
 PREDICTION_OUTPUT = "validation_model_predictions.csv"
@@ -41,7 +41,10 @@ class ModelInputError(ValueError):
     """Model input violates the development-only dataset contract."""
 
 
-def _read_split(path: str | Path, name: str, *, start: str | None, end: str) -> pd.DataFrame:
+def _read_split(
+    path: str | Path, name: str, *, start: str | None, end: str,
+    feature_columns: tuple[str, ...] = FEATURE_COLUMNS,
+) -> pd.DataFrame:
     """Validate an exported feature table without silently accepting new columns."""
     path = Path(path)
     if not path.is_file():
@@ -50,9 +53,10 @@ def _read_split(path: str | Path, name: str, *, start: str | None, end: str) -> 
         frame = pd.read_csv(path, dtype="string", encoding="utf-8-sig")
     except (OSError, UnicodeError, pd.errors.ParserError) as exc:
         raise ModelInputError(f"Cannot read {name} CSV '{path}': {exc}") from exc
-    if list(frame.columns) != list(EXPECTED_COLUMNS):
+    expected = ("date", *feature_columns, TARGET_COLUMN)
+    if list(frame.columns) != list(expected):
         raise ModelInputError(
-            f"{name} columns must be exactly {list(EXPECTED_COLUMNS)} in that order; "
+            f"{name} columns must be exactly {list(expected)} in that order; "
             "unexpected columns could contain leaked future information"
         )
     if frame.empty:
@@ -69,7 +73,7 @@ def _read_split(path: str | Path, name: str, *, start: str | None, end: str) -> 
     if (dates >= pd.Timestamp(end)).any():
         raise ModelInputError(f"{name} includes prediction dates on or after {end}; holdout stays sealed")
 
-    for feature in FEATURE_COLUMNS:
+    for feature in feature_columns:
         try:
             numeric = pd.to_numeric(frame[feature], errors="raise").astype(float)
         except (TypeError, ValueError) as exc:
@@ -112,11 +116,14 @@ def compare_models(
     *,
     validation_start: str = "2023-01-01",
     holdout_start: str = "2025-01-01",
+    feature_columns: tuple[str, ...] = FEATURE_COLUMNS,
 ) -> tuple[pd.DataFrame, dict]:
     """Fit on training only, return *validation* probabilities and descriptive scores.
 
     Hyperparameters are fixed in advance. There is no validation-driven tuning.
     """
+    if feature_columns not in (FEATURE_COLUMNS, EXPANDED_FEATURE_COLUMNS):
+        raise ModelInputError("Only the predefined 3-feature or 6-feature configuration is allowed")
     try:
         vstart = datetime.strptime(validation_start, "%Y-%m-%d")
         hstart = datetime.strptime(holdout_start, "%Y-%m-%d")
@@ -127,14 +134,14 @@ def compare_models(
             or vstart >= hstart):
         raise ModelInputError("Require canonical YYYY-MM-DD cutoffs, validation before holdout")
 
-    train = _read_split(train_csv, "training", start=None, end=validation_start)
-    valid = _read_split(validation_csv, "validation", start=validation_start, end=holdout_start)
+    train = _read_split(train_csv, "training", start=None, end=validation_start, feature_columns=feature_columns)
+    valid = _read_split(validation_csv, "validation", start=validation_start, end=holdout_start, feature_columns=feature_columns)
     if train["date"].max() >= valid["date"].min():
         raise ModelInputError("Training and validation date ranges overlap")
 
-    X_train = train.loc[:, list(FEATURE_COLUMNS)].to_numpy(dtype=float)
+    X_train = train.loc[:, list(feature_columns)].to_numpy(dtype=float)
     y_train = train[TARGET_COLUMN].to_numpy(dtype=int)
-    X_valid = valid.loc[:, list(FEATURE_COLUMNS)].to_numpy(dtype=float)
+    X_valid = valid.loc[:, list(feature_columns)].to_numpy(dtype=float)
     y_valid = valid[TARGET_COLUMN].to_numpy(dtype=int)
     if len(np.unique(y_train)) != 2:
         raise ModelInputError("Training must contain both non-events (0) and downside events (1)")
@@ -165,7 +172,7 @@ def compare_models(
     scores = {"constant_baseline": _metrics(y_valid, p_baseline),
               "logistic_regression": _metrics(y_valid, p_logistic)}
     report = {
-        "scope": "DEVELOPMENT ONLY: trained 2016-2022, evaluated 2023-2024; no final holdout outcomes",
+        "scope": f"DEVELOPMENT ONLY: trained before {validation_start}, validated before {holdout_start}; final holdout outcomes unexamined",
         "training_file": Path(train_csv).name,
         "validation_file": Path(validation_csv).name,
         "training_sha256": sha256(Path(train_csv).read_bytes()).hexdigest(),
@@ -174,7 +181,7 @@ def compare_models(
         "prediction_timestamp": "after prediction-date close; label is NEXT trading-session downside event",
         "validation_start": validation_start,
         "holdout_start": holdout_start,
-        "features": list(FEATURE_COLUMNS),
+        "features": list(feature_columns),
         "target": TARGET_COLUMN,
         "training": {
             "rows": int(len(train)), "events": int(y_train.sum()),
@@ -193,9 +200,9 @@ def compare_models(
             "logistic_regression": {
                 "hyperparameters": {"C": 1.0, "penalty": "l2 (solver default)", "solver": "lbfgs", "max_iter": 2000, "class_weight": None},
                 "scaler_fitted_on": "training only",
-                "scaler_mean": {k: float(v) for k, v in zip(FEATURE_COLUMNS, scaler.mean_)},
-                "scaler_scale": {k: float(v) for k, v in zip(FEATURE_COLUMNS, scaler.scale_)},
-                "coefficients_per_standardized_feature": {k: float(v) for k, v in zip(FEATURE_COLUMNS, coef)},
+                "scaler_mean": {k: float(v) for k, v in zip(feature_columns, scaler.mean_)},
+                "scaler_scale": {k: float(v) for k, v in zip(feature_columns, scaler.scale_)},
+                "coefficients_per_standardized_feature": {k: float(v) for k, v in zip(feature_columns, coef)},
                 "intercept": float(logistic.intercept_[0]),
                 "iterations": int(logistic.n_iter_[0]),
             },
