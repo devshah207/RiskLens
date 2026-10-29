@@ -9,7 +9,7 @@ description = "Educational financial risk-model validation and research project"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{name = "RiskLens Contributors"}]
-dependencies = ["pandas>=2.2,<3", "numpy>=1.26,<3", "scikit-learn>=1.4,<1.10"]
+dependencies = ["pandas>=2.2,<3", "numpy>=1.26,<3", "scikit-learn>=1.4,<1.10", "xgboost>=2.1,<4"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
