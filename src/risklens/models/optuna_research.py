@@ -148,7 +148,7 @@ def resolve_torch_device(requested="auto"):
     )
 
 
-def _lstm_one(tr_x, tr_y, va_x, params, seed, device="auto"):
+def _lstm_one(tr_x, tr_y, va_x, params, seed, device="auto", *, permutation_repeats=0):
     import torch
     from torch import nn
 
@@ -204,7 +204,33 @@ def _lstm_one(tr_x, tr_y, va_x, params, seed, device="auto"):
             optim.step()
     model.eval()
     with torch.no_grad():
-        return torch.sigmoid(model(v)).cpu().numpy().astype(float)
+        probabilities = torch.sigmoid(model(v)).cpu().numpy().astype(float)
+    # Optional interpretation hook: uses the SAME already-fitted LSTM and
+    # training-only scaler. Default (zero) preserves the old return contract.
+    if not isinstance(permutation_repeats, int) or isinstance(permutation_repeats, bool) or not 0 <= permutation_repeats <= 20:
+        raise ValueError("permutation_repeats must be an integer from 0 to 20")
+    if permutation_repeats == 0:
+        return probabilities
+    if len(va_x) < 2:
+        raise ValueError("Need at least 2 evaluation sequences for permutation")
+    random_generator = np.random.default_rng(seed + 10000)
+    altered_probabilities = np.empty(
+        (permutation_repeats, va_x.shape[-1], len(va_x)), dtype=float
+    )
+    with torch.no_grad():
+        for repetition in range(permutation_repeats):
+            for feature_index in range(va_x.shape[-1]):
+                # Permute whole 45-session feature trajectories across examples,
+                # preserving within-feature sequence order; disrupt cross-feature
+                # dependencies. This is descriptive, not a causal intervention.
+                changed = np.array(va_x, copy=True)
+                shuffle = random_generator.permutation(len(va_x))
+                changed[:, :, feature_index] = va_x[shuffle, :, feature_index]
+                altered_probabilities[repetition, feature_index] = (
+                    torch.sigmoid(model(transform(changed)))
+                    .cpu().numpy().astype(float)
+                )
+    return probabilities, altered_probabilities
 
 
 def fit_lstm(params, history, folds, device="auto"):

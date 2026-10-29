@@ -15,6 +15,7 @@ ruff check src tests scripts --select F,E4,E7,E9
 
 risklens monitor-models
 risklens explain-xgb
+risklens explain-lstm --device mps
 risklens monitor-features \
   --vix data/processed/holdout_sources/india_vix_2024_2026.csv \
   --sp500 data/raw/sp500/sp500_daily.csv
@@ -53,7 +54,7 @@ Writes under `data/processed/phase6_explainability/`:
 ## Remaining Phase 6 completion gates
 
 1. Real-data runs on the user's Mac and verification of the generated reports.
-2. Full **LSTM trial #86** sequence-level attribution/sensitivity audit, avoiding training on the opened holdout.
+2. **Implemented:** `risklens explain-lstm` trains one frozen Trial #86 sequence network with pre-2024 training data and performs three deterministic whole-sequence feature permutations on previously inspected 2024 development data. Report per-feature Brier change; this is noncausal sensitivity, not SHAP, and does not open 2025+ or run Optuna.
 3. **Implemented:** `risklens monitor-features` reconstructs the same 11 causal inputs on pre-2025 history and exactly the already-scored 2025-2026 dates. It uses ONLY development-derived quantile bin edges and reports per-feature PSI, mean/std, out-of-development 1st/99th percentile share, provenance, and source-alignment audits. Real-data report remains to be verified.
 4. Integrate model risk decisions, monitoring findings, annual holdout regime shift and VaR warning into a final governance memo.
 5. Keep original 10 phases; after this, Phase 7 financial-report RAG and cited AI research assistant remains required.

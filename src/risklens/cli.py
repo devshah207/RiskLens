@@ -142,6 +142,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     feature_monitor.add_argument("--output-dir", default="data/processed/phase6_feature_drift")
     feature_monitor.add_argument("--overwrite", action="store_true")
+    explain_lstm = sub.add_parser(
+        "explain-lstm",
+        help="Phase 6: fixed trial #86 temporal permutation sensitivity (2024 dev only)",
+    )
+    explain_lstm.add_argument("--nifty", default="data/processed/multiyear/nifty50_ohlc.csv")
+    explain_lstm.add_argument(
+        "--external", default="data/processed/external/nifty50_external_development.csv"
+    )
+    explain_lstm.add_argument(
+        "--study-db", default="data/processed/optuna_search/optuna_studies.sqlite3"
+    )
+    explain_lstm.add_argument("--device", choices=("auto", "cpu", "mps"), default="auto")
+    explain_lstm.add_argument(
+        "--output-dir", default="data/processed/phase6_lstm_sensitivity"
+    )
+    explain_lstm.add_argument("--overwrite", action="store_true")
     return p
 
 
@@ -194,6 +210,21 @@ def run(args: argparse.Namespace) -> int:
         print("PASS: feature-drift audit of previously scored holdout dates")
         print("Features for investigation:", result["features_with_psi_at_least_0_20"])
         print("Report:", Path(args.output_dir) / "feature_drift_report.md")
+        return 0
+
+    if args.command == "explain-lstm":
+        from risklens.models.lstm_explainability import save_lstm_sensitivity
+
+        result = save_lstm_sensitivity(
+            args.nifty, args.external, args.study_db, args.output_dir,
+            device=args.device, overwrite=args.overwrite,
+        )
+        print(
+            "PASS: frozen Optuna LSTM trial #86 explanation;",
+            result["validation_sequences"],
+            "2024 development sequences; no holdout or tuning",
+        )
+        print("Report:", Path(args.output_dir) / "lstm_sequence_sensitivity.md")
         return 0
 
     if args.command == "evaluate-holdout":
