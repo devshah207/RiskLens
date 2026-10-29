@@ -1,7 +1,6 @@
 """No tuning: fixed Optuna LSTM #86 sequence sensitivity checks."""
 import numpy as np
 import pandas as pd
-import pytest
 
 from risklens.cli import build_parser
 from risklens.models import lstm_explainability as sensitivity
