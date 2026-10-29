@@ -259,7 +259,7 @@ def _var_monitor(frame: pd.DataFrame) -> dict:
             "conditional_coverage": cc,
             "annual_exceptions": {
                 str(year): int(frame.loc[frame.validation_year == year, f"var_{level}_exception"].sum())
-                for year in YEARS
+                for year in sorted(frame.validation_year.unique().tolist())
             },
         }
     return out

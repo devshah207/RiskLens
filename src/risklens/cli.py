@@ -81,10 +81,50 @@ def build_parser() -> argparse.ArgumentParser:
     validation.add_argument("--bootstrap-samples", type=int, default=1000)
     validation.add_argument("--block-length", type=int, default=10)
     validation.add_argument("--overwrite", action="store_true")
+    holdout = sub.add_parser(
+        "evaluate-holdout",
+        help="ONE-TIME locked 2025–2026 out-of-time evaluation (explicit unlock required)",
+    )
+    holdout.add_argument(
+        "--nifty", default="data/processed/multiyear/nifty50_ohlc.csv"
+    )
+    holdout.add_argument(
+        "--development-external",
+        default="data/processed/external/nifty50_external_development.csv",
+    )
+    holdout.add_argument("--vix", required=True, help="VIX OHLC source with Dec 2024 context through Sep 2026")
+    holdout.add_argument("--sp500", required=True, help="S&P 500 OHLC with Dec 2024 context through Sep 2026")
+    holdout.add_argument(
+        "--study-db", default="data/processed/optuna_search/optuna_studies.sqlite3"
+    )
+    holdout.add_argument("--device", choices=("auto", "cpu", "mps"), default="auto")
+    holdout.add_argument("--output-dir", default="data/processed/phase5_final_holdout")
+    holdout.add_argument("--confirm-locked-protocol", action="store_true")
     return p
 
 
 def run(args: argparse.Namespace) -> int:
+    if args.command == "evaluate-holdout":
+        from risklens.evaluation.final_holdout import save_holdout
+
+        report = save_holdout(
+            args.nifty,
+            args.development_external,
+            args.vix,
+            args.sp500,
+            args.study_db,
+            args.output_dir,
+            device=args.device,
+            confirm_locked_protocol=args.confirm_locked_protocol,
+        )
+        print(
+            "ONE-TIME OUT-OF-TIME HOLDOUT RECORDED:",
+            report["eligible_holdout_rows"],
+            "eligible forecast dates; preselected model frozen",
+        )
+        print("Verdict:", Path(args.output_dir) / "final_holdout_verdict.md")
+        return 0
+
     if args.command == "validate-risk":
         from risklens.evaluation.risk_validation import save_risk_validation
 
