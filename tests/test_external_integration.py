@@ -2,6 +2,7 @@
 
 All fixture price levels are made up ONLY for tests, never market-data claims.
 """
+
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -13,30 +14,40 @@ import pandas as pd
 import pytest
 
 from risklens.data.external_integration import (
-    ExternalDataError, integrate_external_development, save_external_development,
+    ExternalDataError,
+    integrate_external_development,
+    save_external_development,
 )
 
 
 def source_files(tmp_path: Path):
     nifty = tmp_path / "nifty.csv"
     dates = ["2024-12-27", "2024-12-30", "2024-12-31", "2025-01-02"]
-    prices = [100., 101., 99., 400.]
-    pd.DataFrame({"date": dates, "open": prices, "high": prices,
-                  "low": prices, "close": prices}).to_csv(nifty, index=False)
-    vdir = tmp_path / "vix"; vdir.mkdir()
+    prices = [100.0, 101.0, 99.0, 400.0]
+    pd.DataFrame(
+        {"date": dates, "open": prices, "high": prices, "low": prices, "close": prices}
+    ).to_csv(nifty, index=False)
+    vdir = tmp_path / "vix"
+    vdir.mkdir()
     vix = vdir / "vix_2024.csv"
-    vix.write_text("Date ,Open ,High ,Low ,Close ,Prev. Close\n"
-                   "26-DEC-2024,18,19,17,18,18\n"
-                   "27-DEC-2024,19,20,18,19,18\n"
-                   "30-DEC-2024,50,51,49,50,19\n"
-                   "31-DEC-2024,60,61,59,60,50\n", encoding="utf-8")
+    vix.write_text(
+        "Date ,Open ,High ,Low ,Close ,Prev. Close\n"
+        "26-DEC-2024,18,19,17,18,18\n"
+        "27-DEC-2024,19,20,18,19,18\n"
+        "30-DEC-2024,50,51,49,50,19\n"
+        "31-DEC-2024,60,61,59,60,50\n",
+        encoding="utf-8",
+    )
     sp = tmp_path / "sp500.csv"
-    sp.write_text("Date,Open,High,Low,Close,Adj Close,Volume\n"
-                  "2024-12-26,1000,1010,990,1000,1000,500\n"
-                  "2024-12-27,1020,1030,1010,1020,1020,500\n"
-                  "2024-12-30,1040,1050,1030,1040,1040,500\n"
-                  "2024-12-31,9999,10000,9990,9999,9999,500\n"
-                  "2025-01-02,12000,12001,11999,12000,12000,500\n", encoding="utf-8")
+    sp.write_text(
+        "Date,Open,High,Low,Close,Adj Close,Volume\n"
+        "2024-12-26,1000,1010,990,1000,1000,500\n"
+        "2024-12-27,1020,1030,1010,1020,1020,500\n"
+        "2024-12-30,1040,1050,1030,1040,1040,500\n"
+        "2024-12-31,9999,10000,9990,9999,9999,500\n"
+        "2025-01-02,12000,12001,11999,12000,12000,500\n",
+        encoding="utf-8",
+    )
     return nifty, vdir, sp
 
 
@@ -50,12 +61,12 @@ def test_strict_prior_date_and_us_daily_return(tmp_path):
     assert dec30["india_vix_level"] == 19
     assert dec30["vix_age_calendar_days"] == 3
     assert dec30["sp500_source_date"] == pd.Timestamp("2024-12-27")
-    assert dec30["sp500_previous_return_1d"] == pytest.approx(.02)
+    assert dec30["sp500_previous_return_1d"] == pytest.approx(0.02)
     assert dec30["sp500_age_calendar_days"] == 3
     dec31 = result.loc[result["date"] == "2024-12-31"].iloc[0]
     assert dec31["vix_source_date"] == pd.Timestamp("2024-12-30")
     assert dec31["sp500_source_date"] == pd.Timestamp("2024-12-30")
-    assert dec31["sp500_previous_return_1d"] == pytest.approx(1040/1020-1)
+    assert dec31["sp500_previous_return_1d"] == pytest.approx(1040 / 1020 - 1)
     assert report["nifty_rows_with_both_external_features"] == 2
 
 
@@ -70,17 +81,30 @@ def test_2025_market_prices_cannot_affect_2024_features(tmp_path):
     sf.to_csv(sp, index=False)
     after, report2 = integrate_external_development(nifty, vix, sp)
     pd.testing.assert_frame_equal(original, after)
-    assert report1["nifty_rows_with_both_external_features"] == report2["nifty_rows_with_both_external_features"]
+    assert (
+        report1["nifty_rows_with_both_external_features"]
+        == report2["nifty_rows_with_both_external_features"]
+    )
 
 
 def test_no_same_date_information_used_even_if_updated(tmp_path):
     nifty, vix, sp = source_files(tmp_path)
     before, _ = integrate_external_development(nifty, vix, sp)
     vi = pd.read_csv(vix / "vix_2024.csv")
-    vi.loc[vi["Date "] == "30-DEC-2024", ["Open ", "High ", "Low ", "Close "]] = [900, 901, 899, 900]
+    vi.loc[vi["Date "] == "30-DEC-2024", ["Open ", "High ", "Low ", "Close "]] = [
+        900,
+        901,
+        899,
+        900,
+    ]
     vi.to_csv(vix / "vix_2024.csv", index=False)
     spf = pd.read_csv(sp)
-    spf.loc[spf["Date"] == "2024-12-30", ["Open", "High", "Low", "Close"]] = [3000, 3001, 2999, 3000]
+    spf.loc[spf["Date"] == "2024-12-30", ["Open", "High", "Low", "Close"]] = [
+        3000,
+        3001,
+        2999,
+        3000,
+    ]
     spf.to_csv(sp, index=False)
     after, _ = integrate_external_development(nifty, vix, sp)
     for col in ("india_vix_level", "sp500_previous_return_1d"):
@@ -90,7 +114,9 @@ def test_no_same_date_information_used_even_if_updated(tmp_path):
 def test_vix_zero_open_high_low_quarantined(tmp_path):
     nifty, vix, sp = source_files(tmp_path)
     file = vix / "vix_2024.csv"
-    contents = file.read_text().replace("27-DEC-2024,19,20,18,19,18", "27-DEC-2024,0,0,0,19,0")
+    contents = file.read_text().replace(
+        "27-DEC-2024,19,20,18,19,18", "27-DEC-2024,0,0,0,19,0"
+    )
     file.write_text(contents)
     result, report = integrate_external_development(nifty, vix, sp)
     assert report["vix_source_audit"]["zero_ohl_rows_quarantined"] == ["2024-12-27"]
@@ -118,7 +144,9 @@ def test_no_future_backfill_for_first_observation(tmp_path):
 
 def test_duplicate_vix_date_across_files_is_rejected(tmp_path):
     nifty, vix, sp = source_files(tmp_path)
-    (vix / "another.csv").write_text("Date,Open,High,Low,Close\n27-DEC-2024,19,20,18,19\n")
+    (vix / "another.csv").write_text(
+        "Date,Open,High,Low,Close\n27-DEC-2024,19,20,18,19\n"
+    )
     with pytest.raises(ExternalDataError, match="duplicate date"):
         integrate_external_development(nifty, vix, sp)
 
@@ -126,7 +154,9 @@ def test_duplicate_vix_date_across_files_is_rejected(tmp_path):
 def test_corrupted_vix_high_fails_not_silently_repaired(tmp_path):
     nifty, vix, sp = source_files(tmp_path)
     file = vix / "vix_2024.csv"
-    contents = file.read_text().replace("26-DEC-2024,18,19,17,18,18", "26-DEC-2024,18,15,17,18,18")
+    contents = file.read_text().replace(
+        "26-DEC-2024,18,19,17,18,18", "26-DEC-2024,18,15,17,18,18"
+    )
     file.write_text(contents)
     with pytest.raises(ExternalDataError, match="OHLC failed validation"):
         integrate_external_development(nifty, vix, sp)
@@ -135,14 +165,22 @@ def test_corrupted_vix_high_fails_not_silently_repaired(tmp_path):
 def test_negative_or_missing_vix_closing_level_is_rejected(tmp_path):
     nifty, vix, sp = source_files(tmp_path)
     file = vix / "vix_2024.csv"
-    file.write_text(file.read_text().replace("26-DEC-2024,18,19,17,18,18", "26-DEC-2024,18,19,17,0,18"))
+    file.write_text(
+        file.read_text().replace(
+            "26-DEC-2024,18,19,17,18,18", "26-DEC-2024,18,19,17,0,18"
+        )
+    )
     with pytest.raises(ExternalDataError, match="Close must be strictly positive"):
         integrate_external_development(nifty, vix, sp)
 
 
 def test_sp500_bad_ohlc_detected(tmp_path):
     nifty, vix, sp = source_files(tmp_path)
-    sp.write_text(sp.read_text().replace("2024-12-27,1020,1030,1010,1020", "2024-12-27,1020,1010,1010,1020"))
+    sp.write_text(
+        sp.read_text().replace(
+            "2024-12-27,1020,1030,1010,1020", "2024-12-27,1020,1010,1010,1020"
+        )
+    )
     with pytest.raises(ExternalDataError, match="S&P 500 OHLC failed validation"):
         integrate_external_development(nifty, vix, sp)
 
@@ -175,23 +213,47 @@ def test_save_report_and_refuse_overwrite(tmp_path):
     audit = save_external_development(nifty, vix, sp, out)
     saved = pd.read_csv(out / "nifty50_external_development.csv")
     assert list(saved.columns) == [
-        "date", "open", "high", "low", "close", "vix_source_date", "india_vix_level",
-        "vix_age_calendar_days", "sp500_source_date", "sp500_previous_close",
-        "sp500_previous_return_1d", "sp500_age_calendar_days", "external_features_ready",
+        "date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "vix_source_date",
+        "india_vix_level",
+        "vix_age_calendar_days",
+        "sp500_source_date",
+        "sp500_previous_close",
+        "sp500_previous_return_1d",
+        "sp500_age_calendar_days",
+        "external_features_ready",
     ]
     assert saved["date"].max() < "2025-01-01"
     assert json.loads((out / "external_integration_report.json").read_text()) == audit
-    assert audit["vix_source_audit"]["files"][0]["sha256"] == sha256((vix / "vix_2024.csv").read_bytes()).hexdigest()
+    assert (
+        audit["vix_source_audit"]["files"][0]["sha256"]
+        == sha256((vix / "vix_2024.csv").read_bytes()).hexdigest()
+    )
     with pytest.raises(ExternalDataError, match="output exists"):
         save_external_development(nifty, vix, sp, out)
     report2 = save_external_development(nifty, vix, sp, out, overwrite=True)
-    assert report2["nifty_rows_with_both_external_features"] == audit["nifty_rows_with_both_external_features"]
+    assert (
+        report2["nifty_rows_with_both_external_features"]
+        == audit["nifty_rows_with_both_external_features"]
+    )
 
 
 def test_cli_success_and_refuses_second_write(tmp_path):
     nifty, vix, sp = source_files(tmp_path)
-    command = [sys.executable, "-m", "risklens.data.external_cli", str(nifty), str(vix), str(sp),
-               "--output-dir", str(tmp_path / "out")]
+    command = [
+        sys.executable,
+        "-m",
+        "risklens.data.external_cli",
+        str(nifty),
+        str(vix),
+        str(sp),
+        "--output-dir",
+        str(tmp_path / "out"),
+    ]
     done = subprocess.run(command, capture_output=True, text=True, check=False)
     assert done.returncode == 0, done.stdout + done.stderr
     assert "PASS:" in done.stdout

@@ -24,10 +24,16 @@ MODEL_COLUMNS = {
     "xgboost_3_features": "xgboost_3_features_probability",
     "xgboost_6_features": "xgboost_6_features_probability",
 }
-EXPECTED_COLUMNS = ("validation_year", "date", TARGET,
-                    "original_3feature_probability", "expanded_6feature_probability",
-                    "baseline_probability", "xgboost_3_features_probability",
-                    "xgboost_6_features_probability")
+EXPECTED_COLUMNS = (
+    "validation_year",
+    "date",
+    TARGET,
+    "original_3feature_probability",
+    "expanded_6feature_probability",
+    "baseline_probability",
+    "xgboost_3_features_probability",
+    "xgboost_6_features_probability",
+)
 EDGES = (0.0, 0.05, 0.10, 0.20, 0.40, 1.0)
 BIN_LABELS = ("0–5%", "5–10%", "10–20%", "20–40%", "40–100%")
 YEARLY_FILE = "model_yearly_diagnostics.csv"
@@ -49,7 +55,9 @@ def _load_development_predictions(path: str | Path) -> pd.DataFrame:
     except (OSError, UnicodeError, pd.errors.ParserError) as exc:
         raise DiagnosticsError(f"Cannot read prediction CSV: {exc}") from exc
     if list(df.columns) != list(EXPECTED_COLUMNS):
-        raise DiagnosticsError("Prediction CSV columns differ from the exact Step 3.5 output schema")
+        raise DiagnosticsError(
+            "Prediction CSV columns differ from the exact Step 3.5 output schema"
+        )
     if df.empty:
         raise DiagnosticsError("Prediction CSV contains no rows")
     date_text = df["date"]
@@ -57,9 +65,13 @@ def _load_development_predictions(path: str | Path) -> pd.DataFrame:
     if dates.isna().any() or not dates.dt.strftime("%Y-%m-%d").eq(date_text).all():
         raise DiagnosticsError("Prediction dates must be valid ISO YYYY-MM-DD dates")
     if dates.duplicated().any() or not dates.is_monotonic_increasing:
-        raise DiagnosticsError("Prediction dates must be unique and sorted chronologically")
+        raise DiagnosticsError(
+            "Prediction dates must be unique and sorted chronologically"
+        )
     if (dates.dt.year < YEAR_START).any() or (dates.dt.year > YEAR_END).any():
-        raise DiagnosticsError("Only 2020–2024 development validation dates are accepted; 2025+ holdout is prohibited")
+        raise DiagnosticsError(
+            "Only 2020–2024 development validation dates are accepted; 2025+ holdout is prohibited"
+        )
     years_text = df["validation_year"]
     if not years_text.str.fullmatch(r"\d{4}", na=False).all():
         raise DiagnosticsError("validation_year must be an integer calendar year")
@@ -75,7 +87,9 @@ def _load_development_predictions(path: str | Path) -> pd.DataFrame:
         except (ValueError, TypeError) as exc:
             raise DiagnosticsError(f"Invalid numeric probabilities in {name}") from exc
         if not np.isfinite(p.to_numpy()).all() or not p.between(0, 1).all():
-            raise DiagnosticsError(f"{name} probabilities must be finite values between 0 and 1")
+            raise DiagnosticsError(
+                f"{name} probabilities must be finite values between 0 and 1"
+            )
         df[column] = p
     df["date"] = dates
     df["validation_year"] = years
@@ -85,24 +99,37 @@ def _load_development_predictions(path: str | Path) -> pd.DataFrame:
 def _probability_scores(labels: np.ndarray, probabilities: np.ndarray) -> dict:
     """Scores are descriptive, never used to change models or fit calibrators."""
     eps = np.finfo(float).eps
-    p = np.clip(probabilities, eps, 1.0-eps)
+    p = np.clip(probabilities, eps, 1.0 - eps)
     both_classes = len(np.unique(labels)) == 2
     return {
-        "brier_score": round(float(np.mean((probabilities-labels)**2)), 8),
-        "log_loss": round(float(-np.mean(labels*np.log(p)+(1-labels)*np.log1p(-p))), 8),
-        "roc_auc": round(float(roc_auc_score(labels, probabilities)), 8) if both_classes else None,
-        "average_precision": round(float(average_precision_score(labels, probabilities)), 8) if both_classes else None,
+        "brier_score": round(float(np.mean((probabilities - labels) ** 2)), 8),
+        "log_loss": round(
+            float(-np.mean(labels * np.log(p) + (1 - labels) * np.log1p(-p))), 8
+        ),
+        "roc_auc": round(float(roc_auc_score(labels, probabilities)), 8)
+        if both_classes
+        else None,
+        "average_precision": round(
+            float(average_precision_score(labels, probabilities)), 8
+        )
+        if both_classes
+        else None,
     }
 
 
-def analyze_predictions(source_csv: str | Path, *, example_count: int = 10
-                        ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict]:
+def analyze_predictions(
+    source_csv: str | Path, *, example_count: int = 10
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict]:
     """Read 2020–24 validation predictions and return yearly, reliability and error diagnostics.
 
     Reliability bins were predeclared, not learned or adjusted based on labels.
     The ranked examples show notable misses / non-events, not trade signals.
     """
-    if not isinstance(example_count, int) or isinstance(example_count, bool) or not 1 <= example_count <= 100:
+    if (
+        not isinstance(example_count, int)
+        or isinstance(example_count, bool)
+        or not 1 <= example_count <= 100
+    ):
         raise DiagnosticsError("example_count must be an integer from 1 to 100")
     frame = _load_development_predictions(source_csv)
     labels = frame[TARGET].to_numpy(dtype=int)
@@ -124,37 +151,62 @@ def analyze_predictions(source_csv: str | Path, *, example_count: int = 10
             subset = frame[frame["validation_year"] == year]
             y = subset[TARGET].to_numpy(dtype=int)
             p = subset[column].to_numpy(dtype=float)
-            yearly_rows.append({
-                "model": model_name, "validation_year": int(year),
-                "rows": len(subset), "downside_events": int(y.sum()),
-                "observed_event_frequency": round(float(y.mean()), 8),
-                "mean_predicted_probability": round(float(p.mean()), 8),
-                "probability_gap_predicted_minus_observed": round(float(p.mean()-y.mean()), 8),
-                **_probability_scores(y, p),
-            })
+            yearly_rows.append(
+                {
+                    "model": model_name,
+                    "validation_year": int(year),
+                    "rows": len(subset),
+                    "downside_events": int(y.sum()),
+                    "observed_event_frequency": round(float(y.mean()), 8),
+                    "mean_predicted_probability": round(float(p.mean()), 8),
+                    "probability_gap_predicted_minus_observed": round(
+                        float(p.mean() - y.mean()), 8
+                    ),
+                    **_probability_scores(y, p),
+                }
+            )
         # SAME fixed bins for every model; no optimizing edges after seeing the results.
         bin_index = np.searchsorted(EDGES[1:], p_all, side="right")
-        bin_index = np.minimum(bin_index, len(BIN_LABELS)-1)  # include p=1 in final bin
+        bin_index = np.minimum(
+            bin_index, len(BIN_LABELS) - 1
+        )  # include p=1 in final bin
         for index, bin_label in enumerate(BIN_LABELS):
             matching = bin_index == index
             count = int(matching.sum())
             n_events = int(labels[matching].sum()) if count else 0
-            reliability_rows.append({
-                "model": model_name, "probability_bin": bin_label,
-                "bin_lower_inclusive": EDGES[index], "bin_upper": EDGES[index+1],
-                "rows": count, "events": n_events,
-                "mean_predicted_probability": round(float(p_all[matching].mean()), 8) if count else None,
-                "observed_event_frequency": round(float(labels[matching].mean()), 8) if count else None,
-                "small_sample_warning": bool(count < 30 or n_events < 5),
-            })
+            reliability_rows.append(
+                {
+                    "model": model_name,
+                    "probability_bin": bin_label,
+                    "bin_lower_inclusive": EDGES[index],
+                    "bin_upper": EDGES[index + 1],
+                    "rows": count,
+                    "events": n_events,
+                    "mean_predicted_probability": round(
+                        float(p_all[matching].mean()), 8
+                    )
+                    if count
+                    else None,
+                    "observed_event_frequency": round(float(labels[matching].mean()), 8)
+                    if count
+                    else None,
+                    "small_sample_warning": bool(count < 30 or n_events < 5),
+                }
+            )
 
     # Descriptive examples: positive event assigned smallest risk, and no event
     # assigned largest risk. These are ranked mistakes, not threshold-based alerts.
     selected = "xgboost_3_features_probability"
-    realized_events = frame[frame[TARGET] == 1].sort_values(
-        [selected, "date"], ascending=[True, True], kind="stable").head(example_count)
-    non_events = frame[frame[TARGET] == 0].sort_values(
-        [selected, "date"], ascending=[False, True], kind="stable").head(example_count)
+    realized_events = (
+        frame[frame[TARGET] == 1]
+        .sort_values([selected, "date"], ascending=[True, True], kind="stable")
+        .head(example_count)
+    )
+    non_events = (
+        frame[frame[TARGET] == 0]
+        .sort_values([selected, "date"], ascending=[False, True], kind="stable")
+        .head(example_count)
+    )
     case_columns = ["date", "validation_year", TARGET, selected]
     misses = realized_events[case_columns].copy()
     misses.insert(0, "case_type", "event_assigned_low_probability")
@@ -169,7 +221,8 @@ def analyze_predictions(source_csv: str | Path, *, example_count: int = 10
         "source_sha256": sha256(Path(source_csv).read_bytes()).hexdigest(),
         "generated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "years": [int(year) for year in years],
-        "rows": len(frame), "observed_events": int(labels.sum()),
+        "rows": len(frame),
+        "observed_events": int(labels.sum()),
         "observed_event_frequency": round(float(labels.mean()), 8),
         "models": MODEL_COLUMNS,
         "pooled_scores": pooled,
@@ -191,23 +244,40 @@ def analyze_predictions(source_csv: str | Path, *, example_count: int = 10
     return yearly, reliability, cases, report
 
 
-def save_diagnostics(source_csv: str | Path, output_dir: str | Path, *,
-                     overwrite: bool = False, example_count: int = 10) -> dict:
+def save_diagnostics(
+    source_csv: str | Path,
+    output_dir: str | Path,
+    *,
+    overwrite: bool = False,
+    example_count: int = 10,
+) -> dict:
     """Save CSV diagnostics and JSON report; refuse overwrite unless explicit."""
     out = Path(output_dir)
-    targets = [out / name for name in (YEARLY_FILE, RELIABILITY_FILE, CASES_FILE, REPORT_FILE)]
+    targets = [
+        out / name for name in (YEARLY_FILE, RELIABILITY_FILE, CASES_FILE, REPORT_FILE)
+    ]
     if not overwrite and any(path.exists() for path in targets):
-        raise DiagnosticsError("Diagnostics output already exists; choose another folder or use --overwrite")
-    yearly, reliability, cases, report = analyze_predictions(source_csv, example_count=example_count)
+        raise DiagnosticsError(
+            "Diagnostics output already exists; choose another folder or use --overwrite"
+        )
+    yearly, reliability, cases, report = analyze_predictions(
+        source_csv, example_count=example_count
+    )
     out.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(dir=out) as scratch:
         stage = Path(scratch)
-        for data, filename in ((yearly, YEARLY_FILE), (reliability, RELIABILITY_FILE), (cases, CASES_FILE)):
+        for data, filename in (
+            (yearly, YEARLY_FILE),
+            (reliability, RELIABILITY_FILE),
+            (cases, CASES_FILE),
+        ):
             export = data.copy()
             if "date" in export.columns:
                 export["date"] = export["date"].dt.strftime("%Y-%m-%d")
             export.to_csv(stage / filename, index=False, float_format="%.12g")
-        (stage / REPORT_FILE).write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+        (stage / REPORT_FILE).write_text(
+            json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+        )
         for target in targets:
             (stage / target.name).replace(target)
     return report

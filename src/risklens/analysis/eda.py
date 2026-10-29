@@ -34,7 +34,9 @@ def _date_cutoff(raw: str) -> pd.Timestamp:
 
 def _rounded(value: float, places: int = 8) -> float | None:
     """Serialize finite statistics as ordinary JSON numbers (not NaN)."""
-    return round(float(value), places) if pd.notna(value) and np.isfinite(value) else None
+    return (
+        round(float(value), places) if pd.notna(value) and np.isfinite(value) else None
+    )
 
 
 def analyze_development(
@@ -55,9 +57,17 @@ def analyze_development(
     This method's volatility scaling uses sqrt(sessions_per_year). It does NOT
     assert independence or constant volatility, and it does not estimate VaR.
     """
-    if not isinstance(rolling_window, int) or isinstance(rolling_window, bool) or rolling_window < 2:
+    if (
+        not isinstance(rolling_window, int)
+        or isinstance(rolling_window, bool)
+        or rolling_window < 2
+    ):
         raise EDAError("rolling_window must be an integer >= 2")
-    if not isinstance(sessions_per_year, int) or isinstance(sessions_per_year, bool) or sessions_per_year < 1:
+    if (
+        not isinstance(sessions_per_year, int)
+        or isinstance(sessions_per_year, bool)
+        or sessions_per_year < 1
+    ):
         raise EDAError("sessions_per_year must be a positive integer")
     if not np.isfinite(downside_threshold) or not (0 < downside_threshold < 1):
         raise EDAError("downside_threshold must be strictly between 0 and 1")
@@ -69,17 +79,20 @@ def analyze_development(
         raise EDAError(str(exc)) from exc
 
     # First seal the final holdout; only then calculate ANY returns/statistics.
-    dev = all_prices.loc[all_prices["date"] < cutoff, ["date", "close"]].copy().reset_index(drop=True)
+    dev = (
+        all_prices.loc[all_prices["date"] < cutoff, ["date", "close"]]
+        .copy()
+        .reset_index(drop=True)
+    )
     if len(dev) < 2:
         raise EDAError("Need at least two sessions strictly before holdout start")
 
     dev["daily_return"] = dev["close"].pct_change(fill_method=None)
     dev["log_return"] = np.log1p(dev["daily_return"])
     volatility_name = f"rolling_vol_{rolling_window}d_annualized"
-    dev[volatility_name] = (
-        dev["daily_return"].rolling(window=rolling_window, min_periods=rolling_window)
-        .std(ddof=1) * np.sqrt(sessions_per_year)
-    )
+    dev[volatility_name] = dev["daily_return"].rolling(
+        window=rolling_window, min_periods=rolling_window
+    ).std(ddof=1) * np.sqrt(sessions_per_year)
 
     valid = dev["daily_return"].dropna()
     # Each return is attributed to the day on which the price change is observed.
@@ -87,19 +100,24 @@ def analyze_development(
     annual = []
     for year, group in dev.groupby(dev["date"].dt.year, sort=True):
         rr = group["daily_return"].dropna()
-        annual.append({
-            "return_year": int(year),
-            "return_observations": int(len(rr)),
-            "mean_daily_return": _rounded(rr.mean()),
-            "annualized_volatility": _rounded(rr.std(ddof=1) * np.sqrt(sessions_per_year)),
-        })
+        annual.append(
+            {
+                "return_year": int(year),
+                "return_observations": int(len(rr)),
+                "mean_daily_return": _rounded(rr.mean()),
+                "annualized_volatility": _rounded(
+                    rr.std(ddof=1) * np.sqrt(sessions_per_year)
+                ),
+            }
+        )
 
     downside_count = int((valid <= -downside_threshold).sum())
-    quantile_levels = {"p01": .01, "p05": .05, "p50": .50, "p95": .95, "p99": .99}
+    quantile_levels = {"p01": 0.01, "p05": 0.05, "p50": 0.50, "p95": 0.95, "p99": 0.99}
     worst = dev.nsmallest(min(5, len(valid)), "daily_return")
     worst_days = [
         {"date": row.date.strftime("%Y-%m-%d"), "return": _rounded(row.daily_return)}
-        for row in worst.itertuples(index=False) if pd.notna(row.daily_return)
+        for row in worst.itertuples(index=False)
+        if pd.notna(row.daily_return)
     ]
 
     summary = {
@@ -116,12 +134,16 @@ def analyze_development(
         "mean_daily_return": _rounded(valid.mean()),
         "median_daily_return": _rounded(valid.median()),
         "sample_daily_std": _rounded(valid.std(ddof=1)),
-        "annualized_volatility": _rounded(valid.std(ddof=1) * np.sqrt(sessions_per_year)),
+        "annualized_volatility": _rounded(
+            valid.std(ddof=1) * np.sqrt(sessions_per_year)
+        ),
         "sample_skewness": _rounded(valid.skew()),
         "excess_kurtosis": _rounded(valid.kurt()),
         "min_daily_return": _rounded(valid.min()),
         "max_daily_return": _rounded(valid.max()),
-        "return_quantiles": {k: _rounded(valid.quantile(q)) for k, q in quantile_levels.items()},
+        "return_quantiles": {
+            k: _rounded(valid.quantile(q)) for k, q in quantile_levels.items()
+        },
         "positive_daily_returns": int((valid > 0).sum()),
         "negative_daily_returns": int((valid < 0).sum()),
         "zero_daily_returns": int((valid == 0).sum()),
@@ -160,16 +182,23 @@ def save_development_eda(
         source_csv, holdout_start=holdout_start, rolling_window=rolling_window
     )
     destination = Path(output_dir)
-    targets = [destination / "nifty50_eda_development.csv", destination / "nifty50_eda_development.json"]
+    targets = [
+        destination / "nifty50_eda_development.csv",
+        destination / "nifty50_eda_development.json",
+    ]
     if not overwrite and any(target.exists() for target in targets):
-        raise EDAError("EDA output already exists. Use a different directory or --overwrite.")
+        raise EDAError(
+            "EDA output already exists. Use a different directory or --overwrite."
+        )
     destination.mkdir(parents=True, exist_ok=True)
     export = result.copy()
     export["date"] = export["date"].dt.strftime("%Y-%m-%d")
     with TemporaryDirectory(dir=destination) as tmp:
         stage = Path(tmp)
         export.to_csv(stage / targets[0].name, index=False, na_rep="")
-        (stage / targets[1].name).write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+        (stage / targets[1].name).write_text(
+            json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+        )
         for target in targets:
             (stage / target.name).replace(target)
     return report

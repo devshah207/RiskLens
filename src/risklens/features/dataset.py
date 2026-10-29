@@ -24,7 +24,11 @@ EXPANDED_FEATURE_COLUMNS = FEATURE_COLUMNS + OHLC_FEATURE_COLUMNS
 TECHNICAL_FEATURE_COLUMNS = ("rsi_14", "ema_50_distance", "volatility_10d")
 FULL_FEATURE_COLUMNS = EXPANDED_FEATURE_COLUMNS + TECHNICAL_FEATURE_COLUMNS
 TARGET_COLUMN = "downside_next_session"
-OUTPUT_NAMES = ("train_features.csv", "validation_features.csv", "feature_dataset_report.json")
+OUTPUT_NAMES = (
+    "train_features.csv",
+    "validation_features.csv",
+    "feature_dataset_report.json",
+)
 
 
 class FeatureDatasetError(ValueError):
@@ -52,7 +56,6 @@ def _split_summary(data: pd.DataFrame) -> dict:
         "non_events": int(len(data) - events),
         "event_frequency": round(events / len(data), 8),
     }
-
 
 
 def _wilder_rsi_14(closes: pd.Series) -> pd.Series:
@@ -115,12 +118,22 @@ def build_development_features(
     if not isinstance(include_technical_features, bool):
         raise FeatureDatasetError("include_technical_features must be a boolean")
     if include_technical_features and not include_ohlc_features:
-        raise FeatureDatasetError("technical features require include_ohlc_features=True for the controlled 6-vs-9 comparison")
+        raise FeatureDatasetError(
+            "technical features require include_ohlc_features=True for the controlled 6-vs-9 comparison"
+        )
     if vstart >= hstart:
         raise FeatureDatasetError("validation_start must precede holdout_start")
-    if not isinstance(sessions_per_year, int) or isinstance(sessions_per_year, bool) or sessions_per_year <= 0:
+    if (
+        not isinstance(sessions_per_year, int)
+        or isinstance(sessions_per_year, bool)
+        or sessions_per_year <= 0
+    ):
         raise FeatureDatasetError("sessions_per_year must be a positive integer")
-    if not isinstance(downside_threshold, (int, float)) or not np.isfinite(downside_threshold) or not (0 < downside_threshold < 1):
+    if (
+        not isinstance(downside_threshold, (int, float))
+        or not np.isfinite(downside_threshold)
+        or not (0 < downside_threshold < 1)
+    ):
         raise FeatureDatasetError("downside_threshold must be strictly between 0 and 1")
 
     try:
@@ -129,17 +142,22 @@ def build_development_features(
         raise FeatureDatasetError(str(exc)) from exc
 
     # Seal the final holdout BEFORE calculating any returns, features or labels.
-    dev = prices.loc[prices["date"] < hstart, ["date", "open", "high", "low", "close"]].copy().reset_index(drop=True)
+    dev = (
+        prices.loc[prices["date"] < hstart, ["date", "open", "high", "low", "close"]]
+        .copy()
+        .reset_index(drop=True)
+    )
     if len(dev) < 22:  # 21 closes for 20 returns, plus one later close for a label.
-        raise FeatureDatasetError("Need at least 22 development price rows for 20-return volatility and a next-session label")
+        raise FeatureDatasetError(
+            "Need at least 22 development price rows for 20-return volatility and a next-session label"
+        )
 
     # All three features are available AFTER session t closes; no negative shift.
     dev["return_1d"] = dev["close"].pct_change(fill_method=None)
     dev["return_5d"] = dev["close"].pct_change(periods=5, fill_method=None)
-    dev["volatility_20d"] = (
-        dev["return_1d"].rolling(window=20, min_periods=20).std(ddof=1)
-        * np.sqrt(sessions_per_year)
-    )
+    dev["volatility_20d"] = dev["return_1d"].rolling(window=20, min_periods=20).std(
+        ddof=1
+    ) * np.sqrt(sessions_per_year)
 
     # Intraday features are known after today closes, never use tomorrow's OHLC.
     if include_ohlc_features:
@@ -153,13 +171,17 @@ def build_development_features(
         dev["rsi_14"] = _wilder_rsi_14(dev["close"])
         ema = dev["close"].ewm(span=50, adjust=False, min_periods=50).mean()
         dev["ema_50_distance"] = dev["close"] / ema - 1.0
-        dev["volatility_10d"] = (
-            dev["return_1d"].rolling(window=10, min_periods=10).std(ddof=1)
-            * np.sqrt(sessions_per_year)
-        )
+        dev["volatility_10d"] = dev["return_1d"].rolling(window=10, min_periods=10).std(
+            ddof=1
+        ) * np.sqrt(sessions_per_year)
 
-    active_features = (FULL_FEATURE_COLUMNS if include_technical_features else
-                       EXPANDED_FEATURE_COLUMNS if include_ohlc_features else FEATURE_COLUMNS)
+    active_features = (
+        FULL_FEATURE_COLUMNS
+        if include_technical_features
+        else EXPANDED_FEATURE_COLUMNS
+        if include_ohlc_features
+        else FEATURE_COLUMNS
+    )
 
     # Shifting into the future is permitted ONLY for constructing the label.
     dev["next_session_date"] = dev["date"].shift(-1)
@@ -200,22 +222,37 @@ def build_development_features(
             "return_1d": "close[t]/close[t-1] - 1",
             "return_5d": "close[t]/close[t-5] - 1",
             "volatility_20d": f"sample standard deviation of returns[t-19:t] times sqrt({sessions_per_year})",
-            **({
-                "intraday_range": "(high[t]-low[t])/open[t]",
-                "intraday_return": "close[t]/open[t]-1",
-                "opening_gap": "open[t]/close[t-1]-1",
-            } if include_ohlc_features else {}),
-            **({
-                "rsi_14": "14-return Wilder RSI, initial mean gain/loss over first 14 returns, causal recursive smoothing",
-                "ema_50_distance": "close[t]/EMA50[t]-1, pandas ewm(span=50, adjust=False, min_periods=50)",
-                "volatility_10d": f"trailing 10-return sample std times sqrt({sessions_per_year})",
-            } if include_technical_features else {}),
+            **(
+                {
+                    "intraday_range": "(high[t]-low[t])/open[t]",
+                    "intraday_return": "close[t]/open[t]-1",
+                    "opening_gap": "open[t]/close[t-1]-1",
+                }
+                if include_ohlc_features
+                else {}
+            ),
+            **(
+                {
+                    "rsi_14": "14-return Wilder RSI, initial mean gain/loss over first 14 returns, causal recursive smoothing",
+                    "ema_50_distance": "close[t]/EMA50[t]-1, pandas ewm(span=50, adjust=False, min_periods=50)",
+                    "volatility_10d": f"trailing 10-return sample std times sqrt({sessions_per_year})",
+                }
+                if include_technical_features
+                else {}
+            ),
         },
         "first_20_price_rows_have_incomplete_feature_history": True,
-        "technical_feature_warmup_price_rows": 49 if include_technical_features else None,
+        "technical_feature_warmup_price_rows": 49
+        if include_technical_features
+        else None,
         "technical_features_requested": include_technical_features,
-        "training_boundary_labels_purged": int(((dev["date"] < vstart) & (dev["next_session_date"] >= vstart)).sum()),
-        "last_development_price_date_has_no_label": dev["date"].iloc[-1].date().isoformat(),
+        "training_boundary_labels_purged": int(
+            ((dev["date"] < vstart) & (dev["next_session_date"] >= vstart)).sum()
+        ),
+        "last_development_price_date_has_no_label": dev["date"]
+        .iloc[-1]
+        .date()
+        .isoformat(),
         "train": _split_summary(train),
         "validation": _split_summary(valid),
         "output_columns": columns,
@@ -242,14 +279,18 @@ def save_development_features(
 ) -> dict:
     """Write two development-only model-ready tables and a transparent report."""
     train, valid, report = build_development_features(
-        source_csv, validation_start=validation_start, holdout_start=holdout_start,
+        source_csv,
+        validation_start=validation_start,
+        holdout_start=holdout_start,
         include_ohlc_features=include_ohlc_features,
         include_technical_features=include_technical_features,
     )
     destination = Path(output_dir)
     paths = [destination / name for name in OUTPUT_NAMES]
     if not overwrite and any(path.exists() for path in paths):
-        raise FeatureDatasetError("Output already exists; specify another directory or pass --overwrite")
+        raise FeatureDatasetError(
+            "Output already exists; specify another directory or pass --overwrite"
+        )
 
     destination.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(dir=destination) as tmp:
@@ -258,7 +299,9 @@ def save_development_features(
             exported = frame.copy()
             exported["date"] = exported["date"].dt.strftime("%Y-%m-%d")
             exported.to_csv(stage / name, index=False)
-        (stage / OUTPUT_NAMES[2]).write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+        (stage / OUTPUT_NAMES[2]).write_text(
+            json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+        )
         for target_path in paths:
             (stage / target_path.name).replace(target_path)
     return report

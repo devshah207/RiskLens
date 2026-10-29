@@ -12,7 +12,9 @@ import pytest
 from risklens.data.ingestion import ImportErrorData, import_nifty50_csv
 
 
-FIXTURE = Path(__file__).resolve().parents[1] / "data" / "fixtures" / "sample_nse_export.csv"
+FIXTURE = (
+    Path(__file__).resolve().parents[1] / "data" / "fixtures" / "sample_nse_export.csv"
+)
 
 
 def create_source(tmp_path: Path, text: str) -> Path:
@@ -24,7 +26,9 @@ def create_source(tmp_path: Path, text: str) -> Path:
 def test_import_filters_index_and_writes_provenance(tmp_path):
     before = FIXTURE.read_bytes()
     output = tmp_path / "processed"
-    report = import_nifty50_csv(FIXTURE, output, source_page="https://example.org/source")
+    report = import_nifty50_csv(
+        FIXTURE, output, source_page="https://example.org/source"
+    )
     assert report["source_rows"] == 4
     assert report["excluded_non_nifty50_rows"] == 1
     assert report["rows_imported"] == 3
@@ -41,14 +45,18 @@ def test_import_filters_index_and_writes_provenance(tmp_path):
 
 
 def test_source_without_index_name_requires_confirmation(tmp_path):
-    source = create_source(tmp_path, "Date,Open,High,Low,Close\n01-Sep-2026,100,110,90,105\n")
+    source = create_source(
+        tmp_path, "Date,Open,High,Low,Close\n01-Sep-2026,100,110,90,105\n"
+    )
     with pytest.raises(ImportErrorData, match="assume-nifty50"):
         import_nifty50_csv(source, tmp_path / "out")
     assert not (tmp_path / "out").exists()
 
 
 def test_explicit_confirmation_for_single_series_without_name(tmp_path):
-    source = create_source(tmp_path, "Date,Open,High,Low,Close\n01-Sep-2026,100,110,90,105\n")
+    source = create_source(
+        tmp_path, "Date,Open,High,Low,Close\n01-Sep-2026,100,110,90,105\n"
+    )
     report = import_nifty50_csv(source, tmp_path / "out", assume_nifty50=True)
     assert report["identity_assumed_without_index_column"] is True
     assert "not verified" in " ".join(report["warnings"])
@@ -78,7 +86,8 @@ def test_ambiguous_aliases_fail(tmp_path):
 
 def test_no_matching_index_fails(tmp_path):
     source = create_source(
-        tmp_path, "Index Name,Date,Open,High,Low,Close\nNIFTY BANK,2026-09-01,100,110,90,105\n"
+        tmp_path,
+        "Index Name,Date,Open,High,Low,Close\nNIFTY BANK,2026-09-01,100,110,90,105\n",
     )
     with pytest.raises(ImportErrorData, match="No 'NIFTY 50'"):
         import_nifty50_csv(source, tmp_path / "out")
@@ -121,14 +130,19 @@ def test_unordered_dates_are_sorted_and_disclosed(tmp_path):
     report = import_nifty50_csv(source, tmp_path / "out")
     assert any("sorted" in item for item in report["warnings"])
     assert pd.read_csv(tmp_path / "out/nifty50_ohlc.csv")["date"].tolist() == [
-        "2026-09-01", "2026-09-03"
+        "2026-09-01",
+        "2026-09-03",
     ]
 
 
 def test_command_line_exit_codes(tmp_path):
     command = [
-        sys.executable, "-m", "risklens.data.import_cli", str(FIXTURE),
-        "--output-dir", str(tmp_path / "out"),
+        sys.executable,
+        "-m",
+        "risklens.data.import_cli",
+        str(FIXTURE),
+        "--output-dir",
+        str(tmp_path / "out"),
     ]
     success = subprocess.run(command, capture_output=True, text=True, check=False)
     assert success.returncode == 0

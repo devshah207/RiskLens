@@ -30,7 +30,11 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from risklens.evaluation.metrics import _metrics
-from risklens.features.dataset import FEATURE_COLUMNS, EXPANDED_FEATURE_COLUMNS, TARGET_COLUMN
+from risklens.features.dataset import (
+    FEATURE_COLUMNS,
+    EXPANDED_FEATURE_COLUMNS,
+    TARGET_COLUMN,
+)
 
 EXPECTED_COLUMNS = ("date", *FEATURE_COLUMNS, TARGET_COLUMN)
 PREDICTION_OUTPUT = "validation_model_predictions.csv"
@@ -43,7 +47,11 @@ class ModelInputError(ValueError):
 
 
 def _read_split(
-    path: str | Path, name: str, *, start: str | None, end: str,
+    path: str | Path,
+    name: str,
+    *,
+    start: str | None,
+    end: str,
     feature_columns: tuple[str, ...] = FEATURE_COLUMNS,
 ) -> pd.DataFrame:
     """Validate an exported feature table without silently accepting new columns."""
@@ -68,11 +76,15 @@ def _read_split(
     if dates.isna().any() or not dates.dt.strftime("%Y-%m-%d").eq(dates_text).all():
         raise ModelInputError(f"{name} contains invalid or non-ISO prediction dates")
     if dates.duplicated().any() or not dates.is_monotonic_increasing:
-        raise ModelInputError(f"{name} dates must be unique and chronologically increasing")
+        raise ModelInputError(
+            f"{name} dates must be unique and chronologically increasing"
+        )
     if start is not None and (dates < pd.Timestamp(start)).any():
         raise ModelInputError(f"{name} includes prediction dates before {start}")
     if (dates >= pd.Timestamp(end)).any():
-        raise ModelInputError(f"{name} includes prediction dates on or after {end}; holdout stays sealed")
+        raise ModelInputError(
+            f"{name} includes prediction dates on or after {end}; holdout stays sealed"
+        )
 
     for feature in feature_columns:
         try:
@@ -80,7 +92,9 @@ def _read_split(
         except (TypeError, ValueError) as exc:
             raise ModelInputError(f"{name} has nonnumeric values in {feature}") from exc
         if not np.isfinite(numeric.to_numpy()).all():
-            raise ModelInputError(f"{name} contains nonfinite feature values in {feature}")
+            raise ModelInputError(
+                f"{name} contains nonfinite feature values in {feature}"
+            )
         frame[feature] = numeric
     raw_target = frame[TARGET_COLUMN].astype("string")
     if not raw_target.isin(["0", "1"]).all():
@@ -88,7 +102,6 @@ def _read_split(
     frame[TARGET_COLUMN] = raw_target.astype(int)
     frame["date"] = dates
     return frame
-
 
 
 def compare_models(
@@ -104,19 +117,37 @@ def compare_models(
     Hyperparameters are fixed in advance. There is no validation-driven tuning.
     """
     if feature_columns not in (FEATURE_COLUMNS, EXPANDED_FEATURE_COLUMNS):
-        raise ModelInputError("Only the predefined 3-feature or 6-feature configuration is allowed")
+        raise ModelInputError(
+            "Only the predefined 3-feature or 6-feature configuration is allowed"
+        )
     try:
         vstart = datetime.strptime(validation_start, "%Y-%m-%d")
         hstart = datetime.strptime(holdout_start, "%Y-%m-%d")
     except ValueError as exc:
         raise ModelInputError("Cutoffs must use valid YYYY-MM-DD dates") from exc
-    if (vstart.strftime("%Y-%m-%d") != validation_start
-            or hstart.strftime("%Y-%m-%d") != holdout_start
-            or vstart >= hstart):
-        raise ModelInputError("Require canonical YYYY-MM-DD cutoffs, validation before holdout")
+    if (
+        vstart.strftime("%Y-%m-%d") != validation_start
+        or hstart.strftime("%Y-%m-%d") != holdout_start
+        or vstart >= hstart
+    ):
+        raise ModelInputError(
+            "Require canonical YYYY-MM-DD cutoffs, validation before holdout"
+        )
 
-    train = _read_split(train_csv, "training", start=None, end=validation_start, feature_columns=feature_columns)
-    valid = _read_split(validation_csv, "validation", start=validation_start, end=holdout_start, feature_columns=feature_columns)
+    train = _read_split(
+        train_csv,
+        "training",
+        start=None,
+        end=validation_start,
+        feature_columns=feature_columns,
+    )
+    valid = _read_split(
+        validation_csv,
+        "validation",
+        start=validation_start,
+        end=holdout_start,
+        feature_columns=feature_columns,
+    )
     if train["date"].max() >= valid["date"].min():
         raise ModelInputError("Training and validation date ranges overlap")
 
@@ -125,33 +156,47 @@ def compare_models(
     X_valid = valid.loc[:, list(feature_columns)].to_numpy(dtype=float)
     y_valid = valid[TARGET_COLUMN].to_numpy(dtype=int)
     if len(np.unique(y_train)) != 2:
-        raise ModelInputError("Training must contain both non-events (0) and downside events (1)")
+        raise ModelInputError(
+            "Training must contain both non-events (0) and downside events (1)"
+        )
 
     training_rate = float(y_train.mean())
     p_baseline = np.full(len(valid), training_rate, dtype=float)
 
     # StandardScaler.fit is called ONLY on X_train by Pipeline.fit.
-    model = Pipeline([
-        ("standardize", StandardScaler()),
-        ("classifier", LogisticRegression(
-            C=1.0, solver="lbfgs", max_iter=2000,
-            class_weight=None, random_state=42,
-        )),
-    ])
+    model = Pipeline(
+        [
+            ("standardize", StandardScaler()),
+            (
+                "classifier",
+                LogisticRegression(
+                    C=1.0,
+                    solver="lbfgs",
+                    max_iter=2000,
+                    class_weight=None,
+                    random_state=42,
+                ),
+            ),
+        ]
+    )
     model.fit(X_train, y_train)
     p_logistic = model.predict_proba(X_valid)[:, 1]
 
-    predictions = pd.DataFrame({
-        "date": valid["date"],
-        "actual_downside_event": y_valid,
-        "baseline_probability": p_baseline,
-        "logistic_probability": p_logistic,
-    })
+    predictions = pd.DataFrame(
+        {
+            "date": valid["date"],
+            "actual_downside_event": y_valid,
+            "baseline_probability": p_baseline,
+            "logistic_probability": p_logistic,
+        }
+    )
     scaler = model.named_steps["standardize"]
     logistic = model.named_steps["classifier"]
     coef = logistic.coef_[0]
-    scores = {"constant_baseline": _metrics(y_valid, p_baseline),
-              "logistic_regression": _metrics(y_valid, p_logistic)}
+    scores = {
+        "constant_baseline": _metrics(y_valid, p_baseline),
+        "logistic_regression": _metrics(y_valid, p_logistic),
+    }
     report = {
         "scope": f"DEVELOPMENT ONLY: trained before {validation_start}, validated before {holdout_start}; final holdout outcomes unexamined",
         "training_file": Path(train_csv).name,
@@ -165,13 +210,15 @@ def compare_models(
         "features": list(feature_columns),
         "target": TARGET_COLUMN,
         "training": {
-            "rows": int(len(train)), "events": int(y_train.sum()),
+            "rows": int(len(train)),
+            "events": int(y_train.sum()),
             "event_rate": round(training_rate, 8),
             "first_date": train["date"].iloc[0].strftime("%Y-%m-%d"),
             "last_date": train["date"].iloc[-1].strftime("%Y-%m-%d"),
         },
         "validation": {
-            "rows": int(len(valid)), "events": int(y_valid.sum()),
+            "rows": int(len(valid)),
+            "events": int(y_valid.sum()),
             "event_rate": round(float(y_valid.mean()), 8),
             "first_date": valid["date"].iloc[0].strftime("%Y-%m-%d"),
             "last_date": valid["date"].iloc[-1].strftime("%Y-%m-%d"),
@@ -179,11 +226,23 @@ def compare_models(
         "models": {
             "constant_baseline": "Fixed training event fraction, predicted for every validation date",
             "logistic_regression": {
-                "hyperparameters": {"C": 1.0, "penalty": "l2 (solver default)", "solver": "lbfgs", "max_iter": 2000, "class_weight": None},
+                "hyperparameters": {
+                    "C": 1.0,
+                    "penalty": "l2 (solver default)",
+                    "solver": "lbfgs",
+                    "max_iter": 2000,
+                    "class_weight": None,
+                },
                 "scaler_fitted_on": "training only",
-                "scaler_mean": {k: float(v) for k, v in zip(feature_columns, scaler.mean_)},
-                "scaler_scale": {k: float(v) for k, v in zip(feature_columns, scaler.scale_)},
-                "coefficients_per_standardized_feature": {k: float(v) for k, v in zip(feature_columns, coef)},
+                "scaler_mean": {
+                    k: float(v) for k, v in zip(feature_columns, scaler.mean_)
+                },
+                "scaler_scale": {
+                    k: float(v) for k, v in zip(feature_columns, scaler.scale_)
+                },
+                "coefficients_per_standardized_feature": {
+                    k: float(v) for k, v in zip(feature_columns, coef)
+                },
                 "intercept": float(logistic.intercept_[0]),
                 "iterations": int(logistic.n_iter_[0]),
             },
@@ -212,18 +271,24 @@ def save_comparison(
 ) -> dict:
     """Write validation predictions and model audit report after checks succeed."""
     predictions, report = compare_models(
-        train_csv, validation_csv,
-        validation_start=validation_start, holdout_start=holdout_start,
+        train_csv,
+        validation_csv,
+        validation_start=validation_start,
+        holdout_start=holdout_start,
     )
     out = Path(output_dir)
     targets = [out / PREDICTION_OUTPUT, out / REPORT_OUTPUT]
     if not overwrite and any(path.exists() for path in targets):
-        raise ModelInputError("Output already exists; choose another folder or use --overwrite")
+        raise ModelInputError(
+            "Output already exists; choose another folder or use --overwrite"
+        )
     out.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(dir=out) as tmp:
         stage = Path(tmp)
         predictions.to_csv(stage / PREDICTION_OUTPUT, index=False, float_format="%.12g")
-        (stage / REPORT_OUTPUT).write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+        (stage / REPORT_OUTPUT).write_text(
+            json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+        )
         for target in targets:
             (stage / target.name).replace(target)
     return report

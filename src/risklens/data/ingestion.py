@@ -41,8 +41,10 @@ def _read_source(path: Path) -> pd.DataFrame:
 def _normalize_headers(frame: pd.DataFrame) -> pd.DataFrame:
     """Normalize known header variants; reject ambiguous duplicate meanings."""
     renamed = frame.copy()
-    normalized = [COLUMN_ALIASES.get(str(c).strip().casefold(), str(c).strip().casefold())
-                  for c in renamed.columns]
+    normalized = [
+        COLUMN_ALIASES.get(str(c).strip().casefold(), str(c).strip().casefold())
+        for c in renamed.columns
+    ]
     if len(set(normalized)) != len(normalized):
         raise ImportErrorData(
             "Duplicate or ambiguous column names after normalization. "
@@ -52,7 +54,9 @@ def _normalize_headers(frame: pd.DataFrame) -> pd.DataFrame:
     return renamed
 
 
-def _select_nifty50(frame: pd.DataFrame, assume_nifty50: bool) -> tuple[pd.DataFrame, int, bool]:
+def _select_nifty50(
+    frame: pd.DataFrame, assume_nifty50: bool
+) -> tuple[pd.DataFrame, int, bool]:
     """Filter an explicitly named NIFTY 50 series, or require user attestation."""
     if "index name" not in frame.columns:
         if not assume_nifty50:
@@ -64,7 +68,9 @@ def _select_nifty50(frame: pd.DataFrame, assume_nifty50: bool) -> tuple[pd.DataF
 
     names = frame["index name"].astype("string").str.strip()
     if names.isna().any() or names.eq("").any():
-        raise ImportErrorData("Missing values in 'Index Name' column; fix source first.")
+        raise ImportErrorData(
+            "Missing values in 'Index Name' column; fix source first."
+        )
     keep = names.str.casefold().eq("nifty 50")
     if not keep.any():
         raise ImportErrorData("No 'NIFTY 50' records found in 'Index Name'.")
@@ -111,7 +117,9 @@ def import_nifty50_csv(
         "The importer checks structure and internal consistency, not NSE authenticity."
     ]
     if assumed:
-        warnings.append("NIFTY 50 identity was asserted by the user, not verified in the CSV.")
+        warnings.append(
+            "NIFTY 50 identity was asserted by the user, not verified in the CSV."
+        )
     if excluded_rows:
         warnings.append(f"Excluded {excluded_rows} non-NIFTY 50 records.")
     if checked.attrs.get("reordered"):

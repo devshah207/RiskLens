@@ -31,7 +31,9 @@ def _csv_paths(input_dir: Path) -> list[Path]:
     """Find CSV files directly inside the requested annual-export folder."""
     if not input_dir.is_dir():
         raise ImportErrorData(f"Input folder does not exist: {input_dir}")
-    paths = sorted(p for p in input_dir.iterdir() if p.is_file() and p.suffix.lower() == ".csv")
+    paths = sorted(
+        p for p in input_dir.iterdir() if p.is_file() and p.suffix.lower() == ".csv"
+    )
     if not paths:
         raise ImportErrorData(f"No CSV files found directly inside: {input_dir}")
     return paths
@@ -42,7 +44,9 @@ def _parse_cutoff(value: str) -> pd.Timestamp:
     try:
         parsed = datetime.strptime(value, "%Y-%m-%d")
     except ValueError as exc:
-        raise ImportErrorData("--holdout-start must be a valid YYYY-MM-DD date") from exc
+        raise ImportErrorData(
+            "--holdout-start must be a valid YYYY-MM-DD date"
+        ) from exc
     if parsed.strftime("%Y-%m-%d") != value:
         raise ImportErrorData("--holdout-start must use exactly YYYY-MM-DD")
     return pd.Timestamp(parsed)
@@ -75,7 +79,9 @@ def _read_one_file(path: Path, assume_nifty50: bool) -> tuple[pd.DataFrame, dict
     return checked, metadata
 
 
-def _combine_and_check(frames: list[pd.DataFrame]) -> tuple[pd.DataFrame, int, list[str]]:
+def _combine_and_check(
+    frames: list[pd.DataFrame],
+) -> tuple[pd.DataFrame, int, list[str]]:
     """Reject conflicting overlaps; explicitly count identical repeated dates."""
     combined = pd.concat(frames, ignore_index=True).sort_values("date", kind="stable")
     duplicate_rows = combined[combined.duplicated("date", keep=False)]
@@ -107,11 +113,13 @@ def _date_gap_report(dates: pd.Series, warning_days: int = 7) -> list[dict]:
     flagged = []
     for i in range(1, len(dates)):
         if int(gaps.iloc[i]) > warning_days:
-            flagged.append({
-                "previous_session": dates.iloc[i - 1].date().isoformat(),
-                "next_session": dates.iloc[i].date().isoformat(),
-                "calendar_days_between": int(gaps.iloc[i]),
-            })
+            flagged.append(
+                {
+                    "previous_session": dates.iloc[i - 1].date().isoformat(),
+                    "next_session": dates.iloc[i].date().isoformat(),
+                    "calendar_days_between": int(gaps.iloc[i]),
+                }
+            )
     return flagged
 
 
@@ -135,12 +143,14 @@ def _development_event_frequency(
         year_mask = (current["date"].dt.year == year).to_numpy()
         total = int(year_mask.sum())
         positive = int(events[year_mask].sum())
-        counts.append({
-            "prediction_year": int(year),
-            "eligible_prediction_days": total,
-            "downside_event_days": positive,
-            "event_rate": round(positive / total, 6),
-        })
+        counts.append(
+            {
+                "prediction_year": int(year),
+                "eligible_prediction_days": total,
+                "downside_event_days": positive,
+                "event_rate": round(positive / total, 6),
+            }
+        )
     positives = int(events.sum())
     total = len(current)
     return {
@@ -205,13 +215,21 @@ def import_nifty50_batch(
         "Event-frequency outcomes after the holdout cutoff have not been inspected.",
     ]
     if any(m["identity_assumed_without_index_name"] for m in per_file):
-        warnings.append("At least one file has no index-name column; NIFTY 50 identity was user-asserted.")
+        warnings.append(
+            "At least one file has no index-name column; NIFTY 50 identity was user-asserted."
+        )
     if duplicate_count:
-        warnings.append(f"Removed {duplicate_count} exact cross-file overlap rows, recorded below.")
+        warnings.append(
+            f"Removed {duplicate_count} exact cross-file overlap rows, recorded below."
+        )
     if gap_warnings:
-        warnings.append(f"Review {len(gap_warnings)} calendar gaps longer than seven days.")
+        warnings.append(
+            f"Review {len(gap_warnings)} calendar gaps longer than seven days."
+        )
     if event_report["downside_event_days"] < 50:
-        warnings.append("Fewer than 50 development downside events; statistical estimates may be unstable.")
+        warnings.append(
+            "Fewer than 50 development downside events; statistical estimates may be unstable."
+        )
 
     audit = {
         "instrument": "NIFTY 50 price index (claimed source identity)",
@@ -219,7 +237,9 @@ def import_nifty50_batch(
         "generated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "number_of_files": len(paths),
         "input_files": per_file,
-        "total_source_nifty_rows_including_overlaps": sum(m["valid_nifty50_rows"] for m in per_file),
+        "total_source_nifty_rows_including_overlaps": sum(
+            m["valid_nifty50_rows"] for m in per_file
+        ),
         "identical_cross_file_overlap_rows_removed": duplicate_count,
         "cross_file_overlap_dates": repeated_dates,
         "final_unique_trading_sessions": int(len(combined)),
@@ -237,11 +257,16 @@ def import_nifty50_batch(
     # Stage all three files, then replace targets. This avoids creating partial
     # output if validation fails, though it is not a database transaction.
     from tempfile import TemporaryDirectory
+
     with TemporaryDirectory(dir=destination) as temp:
         stage = Path(temp)
         export.to_csv(stage / OUTPUT_NAMES[0], index=False)
-        (stage / OUTPUT_NAMES[1]).write_text(json.dumps(audit, indent=2) + "\n", encoding="utf-8")
-        (stage / OUTPUT_NAMES[2]).write_text(json.dumps(event_report, indent=2) + "\n", encoding="utf-8")
+        (stage / OUTPUT_NAMES[1]).write_text(
+            json.dumps(audit, indent=2) + "\n", encoding="utf-8"
+        )
+        (stage / OUTPUT_NAMES[2]).write_text(
+            json.dumps(event_report, indent=2) + "\n", encoding="utf-8"
+        )
         for target in targets:
             (stage / target.name).replace(target)
     return audit, event_report

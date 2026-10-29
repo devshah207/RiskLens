@@ -61,7 +61,9 @@ def walk_forward_validation(source_csv: str | Path) -> tuple[pd.DataFrame, dict]
                     holdout_start=validation_end,
                 )
             except FeatureDatasetError as exc:
-                raise WalkForwardError(f"Fold {year} feature preparation failed: {exc}") from exc
+                raise WalkForwardError(
+                    f"Fold {year} feature preparation failed: {exc}"
+                ) from exc
 
             # The existing compare_models() safely reads these temporary tables,
             # fits on training only, and scores validation only. No new model
@@ -76,7 +78,8 @@ def walk_forward_validation(source_csv: str | Path) -> tuple[pd.DataFrame, dict]
             validation_export.to_csv(valid_path, index=False)
             try:
                 predictions, model_audit = compare_models(
-                    train_path, valid_path,
+                    train_path,
+                    valid_path,
                     validation_start=validation_start,
                     holdout_start=validation_end,
                 )
@@ -87,32 +90,45 @@ def walk_forward_validation(source_csv: str | Path) -> tuple[pd.DataFrame, dict]
             # training-only fitted parameters are recorded in our new report.
             predictions.insert(0, "validation_year", year)
             all_predictions.append(predictions)
-            fold_results.append({
-                "validation_year": year,
-                "training_range": {
-                    "first_date": model_audit["training"]["first_date"],
-                    "last_date": model_audit["training"]["last_date"],
-                    "rows": model_audit["training"]["rows"],
-                    "events": model_audit["training"]["events"],
-                    "event_rate": model_audit["training"]["event_rate"],
-                },
-                "validation_range": {
-                    "first_date": model_audit["validation"]["first_date"],
-                    "last_date": model_audit["validation"]["last_date"],
-                    "rows": model_audit["validation"]["rows"],
-                    "events": model_audit["validation"]["events"],
-                    "event_rate": model_audit["validation"]["event_rate"],
-                },
-                "training_boundary_labels_purged": dataset_audit["training_boundary_labels_purged"],
-                "validation_last_date_unlabeled": dataset_audit["last_development_price_date_has_no_label"],
-                "training_only_scaler_means": model_audit["models"]["logistic_regression"]["scaler_mean"],
-                "validation_scores": model_audit["validation_scores"],
-            })
+            fold_results.append(
+                {
+                    "validation_year": year,
+                    "training_range": {
+                        "first_date": model_audit["training"]["first_date"],
+                        "last_date": model_audit["training"]["last_date"],
+                        "rows": model_audit["training"]["rows"],
+                        "events": model_audit["training"]["events"],
+                        "event_rate": model_audit["training"]["event_rate"],
+                    },
+                    "validation_range": {
+                        "first_date": model_audit["validation"]["first_date"],
+                        "last_date": model_audit["validation"]["last_date"],
+                        "rows": model_audit["validation"]["rows"],
+                        "events": model_audit["validation"]["events"],
+                        "event_rate": model_audit["validation"]["event_rate"],
+                    },
+                    "training_boundary_labels_purged": dataset_audit[
+                        "training_boundary_labels_purged"
+                    ],
+                    "validation_last_date_unlabeled": dataset_audit[
+                        "last_development_price_date_has_no_label"
+                    ],
+                    "training_only_scaler_means": model_audit["models"][
+                        "logistic_regression"
+                    ]["scaler_mean"],
+                    "validation_scores": model_audit["validation_scores"],
+                }
+            )
 
     full = pd.concat(all_predictions, ignore_index=True)
     full = full.sort_values("date").reset_index(drop=True)
-    if full["date"].duplicated().any() or (full["date"] >= pd.Timestamp(FINAL_HOLDOUT_START)).any():
-        raise WalkForwardError("Internal fold date overlap or final holdout contamination")
+    if (
+        full["date"].duplicated().any()
+        or (full["date"] >= pd.Timestamp(FINAL_HOLDOUT_START)).any()
+    ):
+        raise WalkForwardError(
+            "Internal fold date overlap or final holdout contamination"
+        )
 
     # Pooled probability scores summarize performance over the annual folds.
     # ROC-AUC / AP across pooled folds are intentionally omitted because
@@ -120,14 +136,18 @@ def walk_forward_validation(source_csv: str | Path) -> tuple[pd.DataFrame, dict]
     # potentially with different baseline class prevalences.
     y = full["actual_downside_event"].to_numpy(dtype=int)
     pooled = {}
-    for model, col in (("constant_baseline", "baseline_probability"),
-                       ("logistic_regression", "logistic_probability")):
+    for model, col in (
+        ("constant_baseline", "baseline_probability"),
+        ("logistic_regression", "logistic_probability"),
+    ):
         p = full[col].to_numpy(dtype=float)
         eps = np.finfo(float).eps
         clipped = np.clip(p, eps, 1 - eps)
         pooled[model] = {
             "brier_score": round(float(np.mean((p - y) ** 2)), 8),
-            "log_loss": round(float(-np.mean(y * np.log(clipped) + (1 - y) * np.log1p(-clipped))), 8),
+            "log_loss": round(
+                float(-np.mean(y * np.log(clipped) + (1 - y) * np.log1p(-clipped))), 8
+            ),
         }
 
     report = {
@@ -168,7 +188,9 @@ def save_walk_forward_validation(
     destination = Path(output_dir)
     targets = [destination / PREDICTIONS_FILENAME, destination / REPORT_FILENAME]
     if not overwrite and any(p.exists() for p in targets):
-        raise WalkForwardError("Walk-forward output already exists; choose another directory or use --overwrite")
+        raise WalkForwardError(
+            "Walk-forward output already exists; choose another directory or use --overwrite"
+        )
     predictions, report = walk_forward_validation(source_csv)
     destination.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(dir=destination) as tmp:
@@ -176,7 +198,9 @@ def save_walk_forward_validation(
         export = predictions.copy()
         export["date"] = export["date"].dt.strftime("%Y-%m-%d")
         export.to_csv(stage / PREDICTIONS_FILENAME, index=False, float_format="%.12g")
-        (stage / REPORT_FILENAME).write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+        (stage / REPORT_FILENAME).write_text(
+            json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+        )
         for target in targets:
             (stage / target.name).replace(target)
     return report
