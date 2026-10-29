@@ -80,7 +80,7 @@ def test_feature_drift_respects_saved_holdout_prediction_dates(tmp_path, monkeyp
     assert report["holdout_dates_from_single_existing_prediction_file"] == 4
     assert report["development_pre_2025_feature_rows"] == 180
     assert all(table.num_development_derived_bins >= 2)
-    assert "holdout_vix" in report["source_sha256"]
+    assert "vix_holdout" in report["source_sha256"]
     out = tmp_path / "results"
     feature_drift.save_feature_drift(**kwargs, output_dir=out)
     assert all((out / name).exists() for name in feature_drift.OUTPUTS)
