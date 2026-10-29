@@ -124,6 +124,24 @@ def build_parser() -> argparse.ArgumentParser:
     explain.add_argument("--max-examples", type=int, default=500)
     explain.add_argument("--output-dir", default="data/processed/phase6_explainability")
     explain.add_argument("--overwrite", action="store_true")
+    feature_monitor = sub.add_parser(
+        "monitor-features", help="Phase 6: retrospective drift of 11 causal input features"
+    )
+    feature_monitor.add_argument(
+        "--nifty", default="data/processed/multiyear/nifty50_ohlc.csv"
+    )
+    feature_monitor.add_argument(
+        "--development-external",
+        default="data/processed/external/nifty50_external_development.csv",
+    )
+    feature_monitor.add_argument("--vix", required=True)
+    feature_monitor.add_argument("--sp500", required=True)
+    feature_monitor.add_argument(
+        "--holdout-predictions",
+        default="data/processed/phase5_final_holdout/final_holdout_predictions.csv",
+    )
+    feature_monitor.add_argument("--output-dir", default="data/processed/phase6_feature_drift")
+    feature_monitor.add_argument("--overwrite", action="store_true")
     return p
 
 
@@ -159,6 +177,23 @@ def run(args: argparse.Namespace) -> int:
             "explanation rows",
         )
         print("Model card:", Path(args.output_dir) / "xgboost_model_card.md")
+        return 0
+
+    if args.command == "monitor-features":
+        from risklens.evaluation.feature_drift import save_feature_drift
+
+        result = save_feature_drift(
+            args.nifty,
+            args.development_external,
+            args.vix,
+            args.sp500,
+            args.holdout_predictions,
+            args.output_dir,
+            overwrite=args.overwrite,
+        )
+        print("PASS: feature-drift audit of previously scored holdout dates")
+        print("Features for investigation:", result["features_with_psi_at_least_0_20"])
+        print("Report:", Path(args.output_dir) / "feature_drift_report.md")
         return 0
 
     if args.command == "evaluate-holdout":
