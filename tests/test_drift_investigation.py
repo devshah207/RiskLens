@@ -30,10 +30,11 @@ def test_vix_overlap_verifies_original_and_new_source(tmp_path, monkeypatch):
     })
     file = tmp_path/"dev.csv"
     old.to_csv(file, index=False)
+    original_new_source_values = old.india_vix_level.to_numpy(copy=True)
     monkeypatch.setattr(diag, "_read_holdout_vix", lambda _:
         (
             pd.DataFrame({"vix_source_date": prior,
-                          "india_vix_level": old.india_vix_level}),
+                          "india_vix_level": original_new_source_values}),
             {"quarantined_zero_ohl_rows": 0},
         )
     )
