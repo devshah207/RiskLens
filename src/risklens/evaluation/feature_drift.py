@@ -123,7 +123,7 @@ def evaluate_feature_drift(
     source_audit = audits["development_source_audit"]
     alignment = audits["holdout_alignment_audit"]
     vix_audit = audits["holdout_vix_audit"]
-    sp500_audit = audits["holdout_sp500_audit"]
+    sp_audit = audits["holdout_sp500_audit"]
 
     rows = []
     for name in FEATURES:

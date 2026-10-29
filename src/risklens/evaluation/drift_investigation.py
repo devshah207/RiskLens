@@ -94,12 +94,12 @@ def _independent_rsi14(prices: np.ndarray) -> np.ndarray:
     gain = float(np.mean(gains[:14]))
     loss = float(np.mean(losses[:14]))
 
-    def value(g, l):
-        if l == 0:
-            return 50.0 if g == 0 else 100.0
-        if g == 0:
+    def value(gain_value, loss_value):
+        if loss_value == 0:
+            return 50.0 if gain_value == 0 else 100.0
+        if gain_value == 0:
             return 0.0
-        return 100.0 - 100.0 / (1 + g/l)
+        return 100.0 - 100.0 / (1 + gain_value/loss_value)
 
     result[14] = value(gain, loss)
     for i in range(15, len(a)):
