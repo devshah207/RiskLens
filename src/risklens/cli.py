@@ -100,10 +100,67 @@ def build_parser() -> argparse.ArgumentParser:
     holdout.add_argument("--device", choices=("auto", "cpu", "mps"), default="auto")
     holdout.add_argument("--output-dir", default="data/processed/phase5_final_holdout")
     holdout.add_argument("--confirm-locked-protocol", action="store_true")
+    monitor = sub.add_parser(
+        "monitor-models", help="Phase 6: post-selection score drift and model-risk monitoring"
+    )
+    monitor.add_argument(
+        "--development-predictions",
+        default="data/processed/phase4_validation/frozen_model_predictions.csv",
+    )
+    monitor.add_argument(
+        "--holdout-predictions",
+        default="data/processed/phase5_final_holdout/final_holdout_predictions.csv",
+    )
+    monitor.add_argument("--output-dir", default="data/processed/phase6_monitoring")
+    monitor.add_argument("--overwrite", action="store_true")
+
+    explain = sub.add_parser(
+        "explain-xgb", help="Phase 6: training-only native XGBoost TreeSHAP explanation"
+    )
+    explain.add_argument("--nifty", default="data/processed/multiyear/nifty50_ohlc.csv")
+    explain.add_argument(
+        "--external", default="data/processed/external/nifty50_external_development.csv"
+    )
+    explain.add_argument("--max-examples", type=int, default=500)
+    explain.add_argument("--output-dir", default="data/processed/phase6_explainability")
+    explain.add_argument("--overwrite", action="store_true")
     return p
 
 
 def run(args: argparse.Namespace) -> int:
+    if args.command == "monitor-models":
+        from risklens.evaluation.monitoring import save_monitoring
+
+        report = save_monitoring(
+            args.development_predictions,
+            args.holdout_predictions,
+            args.output_dir,
+            overwrite=args.overwrite,
+        )
+        print("PASS: post-selection model monitoring; no tuning or model switching")
+        print("Development and holdout already-scored observations retained separately.")
+        print("Risk-register entries:", len(report["risk_register"]))
+        print("Report:", Path(args.output_dir) / "monitoring_report.md")
+        return 0
+
+    if args.command == "explain-xgb":
+        from risklens.models.explainability import save_explanations
+
+        report = save_explanations(
+            args.nifty,
+            args.external,
+            args.output_dir,
+            max_examples=args.max_examples,
+            overwrite=args.overwrite,
+        )
+        print(
+            "PASS: pre-2025 fixed XGBoost TreeSHAP analysis;",
+            report["explanation_rows"],
+            "explanation rows",
+        )
+        print("Model card:", Path(args.output_dir) / "xgboost_model_card.md")
+        return 0
+
     if args.command == "evaluate-holdout":
         from risklens.evaluation.final_holdout import save_holdout
 

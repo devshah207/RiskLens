@@ -25,7 +25,7 @@ Logistic Regression and historical baselines, tree ensemble, LSTM challenger, st
 
 ## Phase 5 — Independent risk-model validation
 Discrimination (ROC-AUC, PR-AUC), calibration, period stability, paired score differences, historical VaR coverage/independence, exceptions, limitations and failures; independent one-time **2025+** holdout after locked protocol and extension of point-in-time external data.
-**Deliverable:** Audited validation report with genuinely untouched holdout results and limitations. **Status:** development diagnostics in implementation; independent holdout not opened.
+**Deliverable:** Audited validation report with genuinely untouched holdout results and limitations. **Status:** independent holdout executed once on user's machine; 433-observation verdict received. Full result JSON/source-hash audit and final validation signoff remain open. See `docs/PHASE5_HOLDOUT_FINDINGS.md`.
 
 ## Phase 6 — Explainability, monitoring and model-risk reporting
 SHAP or justified alternatives, feature contributions, stability, changes/drift, monitoring thresholds, model-risk register, audit artifacts and ongoing validation.
