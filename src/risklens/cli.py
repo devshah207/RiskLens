@@ -100,10 +100,133 @@ def build_parser() -> argparse.ArgumentParser:
     holdout.add_argument("--device", choices=("auto", "cpu", "mps"), default="auto")
     holdout.add_argument("--output-dir", default="data/processed/phase5_final_holdout")
     holdout.add_argument("--confirm-locked-protocol", action="store_true")
+    monitor = sub.add_parser(
+        "monitor-models", help="Phase 6: post-selection score drift and model-risk monitoring"
+    )
+    monitor.add_argument(
+        "--development-predictions",
+        default="data/processed/phase4_validation/frozen_model_predictions.csv",
+    )
+    monitor.add_argument(
+        "--holdout-predictions",
+        default="data/processed/phase5_final_holdout/final_holdout_predictions.csv",
+    )
+    monitor.add_argument("--output-dir", default="data/processed/phase6_monitoring")
+    monitor.add_argument("--overwrite", action="store_true")
+
+    explain = sub.add_parser(
+        "explain-xgb", help="Phase 6: training-only native XGBoost TreeSHAP explanation"
+    )
+    explain.add_argument("--nifty", default="data/processed/multiyear/nifty50_ohlc.csv")
+    explain.add_argument(
+        "--external", default="data/processed/external/nifty50_external_development.csv"
+    )
+    explain.add_argument("--max-examples", type=int, default=500)
+    explain.add_argument("--output-dir", default="data/processed/phase6_explainability")
+    explain.add_argument("--overwrite", action="store_true")
+    feature_monitor = sub.add_parser(
+        "monitor-features", help="Phase 6: retrospective drift of 11 causal input features"
+    )
+    feature_monitor.add_argument(
+        "--nifty", default="data/processed/multiyear/nifty50_ohlc.csv"
+    )
+    feature_monitor.add_argument(
+        "--development-external",
+        default="data/processed/external/nifty50_external_development.csv",
+    )
+    feature_monitor.add_argument("--vix", required=True)
+    feature_monitor.add_argument("--sp500", required=True)
+    feature_monitor.add_argument(
+        "--holdout-predictions",
+        default="data/processed/phase5_final_holdout/final_holdout_predictions.csv",
+    )
+    feature_monitor.add_argument("--output-dir", default="data/processed/phase6_feature_drift")
+    feature_monitor.add_argument("--overwrite", action="store_true")
+    explain_lstm = sub.add_parser(
+        "explain-lstm",
+        help="Phase 6: fixed trial #86 temporal permutation sensitivity (2024 dev only)",
+    )
+    explain_lstm.add_argument("--nifty", default="data/processed/multiyear/nifty50_ohlc.csv")
+    explain_lstm.add_argument(
+        "--external", default="data/processed/external/nifty50_external_development.csv"
+    )
+    explain_lstm.add_argument(
+        "--study-db", default="data/processed/optuna_search/optuna_studies.sqlite3"
+    )
+    explain_lstm.add_argument("--device", choices=("auto", "cpu", "mps"), default="auto")
+    explain_lstm.add_argument(
+        "--output-dir", default="data/processed/phase6_lstm_sensitivity"
+    )
+    explain_lstm.add_argument("--overwrite", action="store_true")
     return p
 
 
 def run(args: argparse.Namespace) -> int:
+    if args.command == "monitor-models":
+        from risklens.evaluation.monitoring import save_monitoring
+
+        report = save_monitoring(
+            args.development_predictions,
+            args.holdout_predictions,
+            args.output_dir,
+            overwrite=args.overwrite,
+        )
+        print("PASS: post-selection model monitoring; no tuning or model switching")
+        print("Development and holdout already-scored observations retained separately.")
+        print("Risk-register entries:", len(report["risk_register"]))
+        print("Report:", Path(args.output_dir) / "monitoring_report.md")
+        return 0
+
+    if args.command == "explain-xgb":
+        from risklens.models.explainability import save_explanations
+
+        report = save_explanations(
+            args.nifty,
+            args.external,
+            args.output_dir,
+            max_examples=args.max_examples,
+            overwrite=args.overwrite,
+        )
+        print(
+            "PASS: pre-2025 fixed XGBoost TreeSHAP analysis;",
+            report["explanation_rows"],
+            "explanation rows",
+        )
+        print("Model card:", Path(args.output_dir) / "xgboost_model_card.md")
+        return 0
+
+    if args.command == "monitor-features":
+        from risklens.evaluation.feature_drift import save_feature_drift
+
+        result = save_feature_drift(
+            args.nifty,
+            args.development_external,
+            args.vix,
+            args.sp500,
+            args.holdout_predictions,
+            args.output_dir,
+            overwrite=args.overwrite,
+        )
+        print("PASS: feature-drift audit of previously scored holdout dates")
+        print("Features for investigation:", result["features_with_psi_at_least_0_20"])
+        print("Report:", Path(args.output_dir) / "feature_drift_report.md")
+        return 0
+
+    if args.command == "explain-lstm":
+        from risklens.models.lstm_explainability import save_lstm_sensitivity
+
+        result = save_lstm_sensitivity(
+            args.nifty, args.external, args.study_db, args.output_dir,
+            device=args.device, overwrite=args.overwrite,
+        )
+        print(
+            "PASS: frozen Optuna LSTM trial #86 explanation;",
+            result["validation_sequences"],
+            "2024 development sequences; no holdout or tuning",
+        )
+        print("Report:", Path(args.output_dir) / "lstm_sequence_sensitivity.md")
+        return 0
+
     if args.command == "evaluate-holdout":
         from risklens.evaluation.final_holdout import save_holdout
 
