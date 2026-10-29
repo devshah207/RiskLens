@@ -107,6 +107,8 @@ def _attach_holdout_external(
     valid: pd.DataFrame, vix: pd.DataFrame, sp500: pd.DataFrame
 ) -> tuple[pd.DataFrame, dict]:
     """Strictly prior source DATES, never same-day, and no stale >7-calendar-day matches."""
+    if any(column not in valid.columns for column in FULL_FEATURE_COLUMNS):
+        raise HoldoutError("Missing expected causal NIFTY indicator features")
     tolerance = pd.Timedelta(days=MAX_EXTERNAL_AGE_DAYS)
     out = pd.merge_asof(
         valid.sort_values("date"),
