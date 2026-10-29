@@ -158,6 +158,27 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir", default="data/processed/phase6_lstm_sensitivity"
     )
     explain_lstm.add_argument("--overwrite", action="store_true")
+    investigation = sub.add_parser(
+        "investigate-drift",
+        help="Diagnose EMA50, India VIX and RSI14 drift on previously scored dates",
+    )
+    investigation.add_argument(
+        "--nifty", default="data/processed/multiyear/nifty50_ohlc.csv"
+    )
+    investigation.add_argument(
+        "--development-external",
+        default="data/processed/external/nifty50_external_development.csv",
+    )
+    investigation.add_argument("--vix", required=True)
+    investigation.add_argument("--sp500", required=True)
+    investigation.add_argument(
+        "--holdout-predictions",
+        default="data/processed/phase5_final_holdout/final_holdout_predictions.csv",
+    )
+    investigation.add_argument(
+        "--output-dir", default="data/processed/phase6_drift_investigation"
+    )
+    investigation.add_argument("--overwrite", action="store_true")
     return p
 
 
@@ -193,6 +214,27 @@ def run(args: argparse.Namespace) -> int:
             "explanation rows",
         )
         print("Model card:", Path(args.output_dir) / "xgboost_model_card.md")
+        return 0
+
+    if args.command == "investigate-drift":
+        from risklens.evaluation.drift_investigation import save_investigation
+
+        report = save_investigation(
+            args.nifty,
+            args.development_external,
+            args.vix,
+            args.sp500,
+            args.holdout_predictions,
+            args.output_dir,
+            overwrite=args.overwrite,
+        )
+        print("Root-cause evidence generated for EMA50, India VIX, RSI14.")
+        print("Formula audit:", report["feature_formula_integrity"]["formula_consistency"])
+        print("VIX source overlap:", report["vix_2024_source_overlap"]["assessment"])
+        print("VIX lag:", report["vix_holdout_source_age"]["point_in_time_date_audit"])
+        for feature in report["features"]:
+            print(feature, "2025/2026 and two prior-year reference tables produced")
+        print("Investigation:", Path(args.output_dir) / "three_feature_investigation.md")
         return 0
 
     if args.command == "monitor-features":
