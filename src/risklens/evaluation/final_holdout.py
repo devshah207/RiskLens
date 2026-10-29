@@ -19,7 +19,7 @@ from xgboost import XGBClassifier
 from risklens.data.validation import load_ohlc_csv, validate_ohlc
 from risklens.evaluation.features import MULTIFACTOR_FEATURE_COLUMNS
 from risklens.evaluation.metrics import _metrics
-from risklens.evaluation.risk_validation import _reliability, _var_monitor
+from risklens.evaluation.risk_validation import _cases, _reliability, _var_monitor
 from risklens.features.dataset import (
     FULL_FEATURE_COLUMNS,
     TARGET_COLUMN,
@@ -44,6 +44,7 @@ OUTPUT_PREDICTIONS = "final_holdout_predictions.csv"
 OUTPUT_REPORT = "final_holdout_report.json"
 OUTPUT_MEMO = "final_holdout_verdict.md"
 OUTPUT_RELIABILITY = "final_holdout_reliability.csv"
+OUTPUT_CASES = "final_holdout_error_cases.csv"
 
 
 class HoldoutError(ValueError):
@@ -321,6 +322,11 @@ def evaluate_holdout(
         "pre_2025_lstm_training_sequences": int(len(train_x)),
         "eligible_holdout_rows": int(len(scored)),
         "excluded_holdout_rows_incomplete_45_session_history": int(excluded),
+        "excluded_holdout_date_sample": [
+            str(x.date()) for x in full_valid.loc[
+                ~full_valid.date.isin(scored.date), "date"
+            ].head(20)
+        ],
         "source_alignment": holdout_audit,
         "vix_source": vix_audit,
         "sp500_source": sp_audit,
@@ -421,10 +427,16 @@ def save_holdout(
         export["date"] = export.date.dt.strftime("%Y-%m-%d")
         export.to_csv(tmp/OUTPUT_PREDICTIONS, index=False, float_format="%.12g")
         reliability.to_csv(tmp/OUTPUT_RELIABILITY, index=False)
+        cases = _cases(scored)
+        cases["date"] = cases.date.dt.strftime("%Y-%m-%d")
+        cases.to_csv(tmp/OUTPUT_CASES, index=False)
         (tmp/OUTPUT_REPORT).write_text(
             json.dumps(report, indent=2, allow_nan=False)+"\n", encoding="utf-8"
         )
         (tmp/OUTPUT_MEMO).write_text(_memo(report), encoding="utf-8")
-        for name in (OUTPUT_PREDICTIONS, OUTPUT_RELIABILITY, OUTPUT_REPORT, OUTPUT_MEMO):
+        for name in (
+            OUTPUT_PREDICTIONS, OUTPUT_RELIABILITY, OUTPUT_CASES,
+            OUTPUT_REPORT, OUTPUT_MEMO,
+        ):
             (tmp/name).replace(out/name)
     return report

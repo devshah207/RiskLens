@@ -163,7 +163,7 @@ def test_synthetic_full_holdout_pipeline(tmp_path, monkeypatch):
     assert len(pd.read_csv(out / holdout.OUTPUT_PREDICTIONS)) == result["eligible_holdout_rows"]
     assert all((out / filename).is_file() for filename in (
         holdout.OUTPUT_PREDICTIONS, holdout.OUTPUT_REPORT,
-        holdout.OUTPUT_RELIABILITY, holdout.OUTPUT_MEMO,
+        holdout.OUTPUT_RELIABILITY, holdout.OUTPUT_CASES, holdout.OUTPUT_MEMO,
     ))
     preds = pd.read_csv(out / holdout.OUTPUT_PREDICTIONS)
     assert (preds.date < "2026-09-30").all()

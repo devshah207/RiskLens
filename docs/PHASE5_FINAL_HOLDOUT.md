@@ -48,6 +48,7 @@ The full report is written only once to `data/processed/phase5_final_holdout/`; 
 Outputs:
 - `final_holdout_predictions.csv`: aligned one-time probabilities, dates and labels.
 - `final_holdout_reliability.csv`: fixed-bin reliability with bin-size warnings.
+- `final_holdout_error_cases.csv`: retrospective low-probability realized events and high-probability non-events, for both frozen candidates.
 - `final_holdout_report.json`: frozen parameters, study/source checksums, counts, yearly metrics, calibration, 95%/99% VaR coverage and independence checks.
 - `final_holdout_verdict.md`: human-readable report with limitations.
 
