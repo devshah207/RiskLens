@@ -1,0 +1,140 @@
+{
+  "schema_version": "1.0",
+  "record_date": "2026-10-30",
+  "purpose": "Historical specification/evidence freeze; NOT a persisted model-weights archive",
+  "repo": "devshah207/RiskLens",
+  "baseline_git_commit": "8f519527acc742ad38d84a13f64404b8f7b99451",
+  "status": "Published for owner review on a dedicated branch; not merged, final holdout model selection unchanged",
+  "task": "NIFTY50 next-session close-to-close return <= -1.0%, predict after session t close",
+  "development_training_cutoff_exclusive": "2025-01-01",
+  "holdout": {
+    "period": "2025-01-01 through Sep 2026",
+    "rows": 433,
+    "reopened_for_selection": false,
+    "repeat_scoring_authorized": false,
+    "result_report_source": "data/processed/phase5_final_holdout/final_holdout_report.json"
+  },
+  "champion": {
+    "name": "fixed_xgboost_11",
+    "role": "preselected research champion",
+    "features": [
+      "return_1d",
+      "return_5d",
+      "volatility_20d",
+      "intraday_range",
+      "intraday_return",
+      "opening_gap",
+      "rsi_14",
+      "ema_50_distance",
+      "volatility_10d",
+      "india_vix_level",
+      "sp500_previous_return_1d"
+    ],
+    "parameters": {
+      "n_estimators": 80,
+      "max_depth": 2,
+      "learning_rate": 0.04,
+      "min_child_weight": 10,
+      "gamma": 1,
+      "subsample": 0.8,
+      "colsample_bytree": 0.9,
+      "reg_lambda": 10,
+      "reg_alpha": 0,
+      "objective": "binary:logistic",
+      "eval_metric": "logloss",
+      "tree_method": "hist",
+      "random_state": 42,
+      "n_jobs": 1,
+      "scale_pos_weight": 1,
+      "verbosity": 0
+    },
+    "holdout_metrics": {
+      "roc_auc": 0.67275606,
+      "average_precision": 0.18610282,
+      "brier_score": 0.08477265,
+      "log_loss": 0.30329503,
+      "threshold": 0.5,
+      "precision_at_threshold": 0,
+      "recall_at_threshold": 0,
+      "confusion_matrix": {
+        "tn": 391,
+        "fp": 0,
+        "fn": 42,
+        "tp": 0
+      },
+      "warning": null
+    }
+  },
+  "challenger": {
+    "name": "lstm_optuna_trial86",
+    "role": "preselected challenger, never older manually designed LSTM",
+    "features": [
+      "return_1d",
+      "return_5d",
+      "volatility_20d",
+      "intraday_range",
+      "intraday_return",
+      "opening_gap",
+      "rsi_14",
+      "ema_50_distance",
+      "volatility_10d",
+      "india_vix_level",
+      "sp500_previous_return_1d"
+    ],
+    "parameters": {
+      "lookback": 45,
+      "hidden": 24,
+      "layers": 2,
+      "batch": 128,
+      "epochs": 24,
+      "dropout": 0.3413771488170494,
+      "lr": 0.0027467789382135,
+      "weight_decay": 0.0006684358163984
+    },
+    "trial_number": 86,
+    "trial_db_sha256": "87c8c4ddb256918cf8a278f7e5deeca8c3300bee8eea2e14bc18e06749eb561e",
+    "trial_objective_brier": 0.12022482814460202,
+    "seed": 4051,
+    "holdout_metrics": {
+      "roc_auc": 0.68487395,
+      "average_precision": 0.21897271,
+      "brier_score": 0.0842992,
+      "log_loss": 0.30036197,
+      "threshold": 0.5,
+      "precision_at_threshold": 0,
+      "recall_at_threshold": 0,
+      "confusion_matrix": {
+        "tn": 391,
+        "fp": 0,
+        "fn": 42,
+        "tp": 0
+      },
+      "warning": null
+    }
+  },
+  "protected_file_sha256": {
+    "data/processed/phase5_final_holdout/final_holdout_report.json": "ad231f01db2fe035e15f7a675a30be11ff8a2499483b23f667a0afde93094a87",
+    "data/processed/phase4_validation/frozen_model_predictions.csv": "6d1fdc455ed30b35c594955dc22e7af1a1fd450a3246ee3dc367ebff6577874a",
+    "data/processed/phase5_final_holdout/final_holdout_predictions.csv": "47f84bb4e0242cd03de5a46cd4cb88120a9ad36c5841064fa6c21484d08f162e",
+    "data/processed/multiyear/nifty50_ohlc.csv": "e60289f9cf45eb099a62a9a0ba4dbaeb9927cf365666ede722b24a1fcec48a58",
+    "data/processed/external/nifty50_external_development.csv": "7338b193c0641ee94ee8fc6e3a1ffb5e3823d36b24aafbd81a01831c6e246167",
+    "data/processed/holdout_sources/india_vix_2024_2026.csv": "4782afd724bcb51a3c690807f3b1b61aac9b4c24a36c402162b3075539d9682d",
+    "data/raw/sp500/sp500_daily.csv": "b8c00565b6d13bd5ea72d65bb057d526ed4757b8d2da2988ea6b2a9228f3a9a6",
+    "data/processed/optuna_search/optuna_studies.sqlite3": "87c8c4ddb256918cf8a278f7e5deeca8c3300bee8eea2e14bc18e06749eb561e",
+    "data/processed/phase6_governance/RiskLens_VaR_Independent_Reconstruction.csv": "691f51a48e254aacd22170b653f4fcaae4ff5f460abf51824d009a5e2f9a4723"
+  },
+  "code_provenance": {
+    "reference_commit": "8f519527acc742ad38d84a13f64404b8f7b99451",
+    "source_modules": [
+      "src/risklens/models/xgboost_walk_forward.py",
+      "src/risklens/models/frozen_comparison.py",
+      "src/risklens/models/optuna_research.py",
+      "src/risklens/evaluation/final_holdout.py",
+      "src/risklens/features/dataset.py"
+    ]
+  },
+  "selection_policy": "Do not promote variants, choose best seed, alter frozen parameters/features or tune thresholds using already-viewed 2025–2026 outcomes.",
+  "weights_archived": false,
+  "weights_note": "The existing one-time holdout produced predictions/reports, not serialized fitted model objects. Locked configs and evidence do not guarantee byte-for-byte identical retrained weights; Apple MPS execution may be nondeterministic.",
+  "scientific_status": "Research prototype. Model-risk sign-off and LSTM score-PSI comparator interpretation remain open; not approved for deployment."
+}

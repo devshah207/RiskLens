@@ -1,24 +1,19 @@
 # Phase 6 — Explainability, Monitoring and Model-Risk Reporting
 
+> **Status update (30 October 2026):** All original real-data monitoring and explainability workflows have been run; three-feature investigation, development-only feature variants, seven-seed stability and saved-prediction PSI audit have been reviewed. Freeze verifier passed 9/9 and local tests passed (303). The numerical LSTM monitoring PSI alert is verified but the development-refit baseline confounder is unresolved causally. Refer to `RiskLens_Phase6_Review_Draft.md` and `RiskLens_Phase6_Saved_Prediction_PSI_Audit_2026-10-30.md`. Formal governance approval and PR #6 merge remain pending; no new research reruns are needed for sign-off.
+
 **Original RiskLens 10-phase roadmap — implementation-first, no further Optuna experiments.**
 
-## Two maintained commands
+## Historical implemented commands (already executed; do not rerun for sign-off)
 
 The existing 2025–2026 holdout has already been evaluated once on the user's machine. The commands below **never rerun that evaluation, unlock data, or select models**. Both use the locked fixed XGBoost + actual Optuna LSTM trial #86 decision.
 
+The original implemented workflows were `risklens monitor-models`, `risklens explain-xgb`, `risklens explain-lstm --device mps` and `risklens monitor-features`. They were already executed and inspected on the user's Mac. **Do not switch branches or rerun model fitting just to close Phase 6.** The read-only local sign-off checks are:
+
 ```bash
-git switch main
-git pull --ff-only origin main
-python -m pip install -e ".[dev,deep,tuning]"
+python scripts/verify_phase6_freeze.py
 python -m pytest -q
 ruff check src tests scripts --select F,E4,E7,E9
-
-risklens monitor-models
-risklens explain-xgb
-risklens explain-lstm --device mps
-risklens monitor-features \
-  --vix data/processed/holdout_sources/india_vix_2024_2026.csv \
-  --sp500 data/raw/sp500/sp500_daily.csv
 ```
 
 ### Monitoring: `risklens monitor-models`
@@ -51,12 +46,12 @@ Writes under `data/processed/phase6_explainability/`:
 
 **Do not interpret SHAP as causality or evidence of future predictive success.** This is an in-sample descriptive explanation of a pre-2025 refit. It is not an exact archived model object from the user's one-time holdout run and cannot claim model-instance identity without a persisted model artifact.
 
-## Remaining Phase 6 completion gates
+## Original implementation checklist (completed; governance approval pending)
 
-1. Real-data runs on the user's Mac and verification of the generated reports.
+1. **Completed:** Real-data runs on the user's Mac and verification of the generated reports.
 2. **Implemented:** `risklens explain-lstm` trains one frozen Trial #86 sequence network with pre-2024 training data and performs three deterministic whole-sequence feature permutations on previously inspected 2024 development data. Report per-feature Brier change; this is noncausal sensitivity, not SHAP, and does not open 2025+ or run Optuna.
-3. **Implemented:** `risklens monitor-features` reconstructs the same 11 causal inputs on pre-2025 history and exactly the already-scored 2025-2026 dates. It uses ONLY development-derived quantile bin edges and reports per-feature PSI, mean/std, out-of-development 1st/99th percentile share, provenance, and source-alignment audits. Real-data report remains to be verified.
-4. Integrate model risk decisions, monitoring findings, annual holdout regime shift and VaR warning into a final governance memo.
+3. **Implemented:** `risklens monitor-features` reconstructs the same 11 causal inputs on pre-2025 history and exactly the already-scored 2025-2026 dates. It uses ONLY development-derived quantile bin edges and reports per-feature PSI, mean/std, out-of-development 1st/99th percentile share, provenance, and source-alignment audits. Real-data report subsequently verified; follow-up findings are in the scientific review.
+4. **Completed for owner review:** Integrate model risk decisions, monitoring findings, annual holdout regime shift and VaR warnings into scientific governance memo and freeze record; merge still needs owner authorization.
 5. Keep original 10 phases; after this, Phase 7 financial-report RAG and cited AI research assistant remains required.
 
 No separate cleanup stage should be necessary; code lives in focused monitoring, feature-drift and explainability modules, the existing CLI and targeted tests.
