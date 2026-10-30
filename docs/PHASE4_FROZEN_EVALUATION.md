@@ -1,5 +1,7 @@
 # Phase 4 — Frozen Champion/Challenger Evaluation
 
+> **Dated historical-protocol notice (30 October 2026):** Statements below that the 2025+ holdout was *sealed* describe the state **at the time of Phase 4**. The predeclared one-time holdout was subsequently evaluated, audited and frozen; see `PHASE5_HOLDOUT_FINDINGS.md` and the Phase 6 governance memo. This older protocol is intentionally retained rather than rewritten as though it had always described later evidence. **Do not rerun the holdout or tune models.**
+
 **Primary candidate:** fixed 11-feature XGBoost (original conservative parameters). **Challenger:** Optuna LSTM trial **#86**, using its *actual tuned architecture* and 45-session lookback.
 
 This implementation runs **zero additional Optuna trials**. It checks your saved SQLite trial #86 parameters and objective value before fitting either model. The previous manually configured LSTM benchmark remains separate and must not be called trial #86.
