@@ -26,7 +26,7 @@ The difference in original holdout scores is observational; it does **not** auth
 - Three-feature audits: EMA-50 and RSI-14 formulas independently agree; India VIX 2024 source-overlap values agree. Drifts are investigated, not proven harmless.
 - Ablations and regime-context variants: exploratory. No reliable feature-deletion benefit.
 - Seven-seed Trial #86 robustness: regime-context benefit did not persist consistently; original 11-feature Trial #86 remains the challenger.
-- LSTM monitoring score PSI 0.4702: explanation remains limited by comparisons across different annual-fitted development models versus one holdout fitted model. Additional **saved-prediction-only** diagnostic may be appropriate; no re-scoring.
+- **Saved-prediction PSI audit completed:** the original LSTM score PSI **0.47019283** and XGBoost **0.06829280** were reproduced from saved predictions with matching provenance. Within the same final fitted model, the 2025-versus-2026 score PSI was **0.423342 LSTM** and **0.425183 XGBoost**. Pooled development-to-holdout comparison still mixes five annually fitted models with one final fitted model, so the whole PSI change cannot be uniquely attributed to market regime. MR-02 remains a monitored research concern; no re-scoring or model promotion.
 - Phase 6 risk-register/documentation approval still pending; no live trading/banking approval.
 
 ## Reproducibility and what is actually frozen
@@ -38,6 +38,7 @@ The JSON manifest preserves **exact original frozen parameters**, SHA-256 finger
 ## File placement
 
 - `docs/RiskLens_Phase6_Review_Draft.md` — owner-review scientific report, still a draft.
+- `docs/RiskLens_Phase6_Saved_Prediction_PSI_Audit_2026-10-30.md` — independent retrospective saved-prediction monitoring audit.
 - `data/processed/phase6_governance/RiskLens_VaR_Independent_Reconstruction.csv` — research-only source evidence; this folder is ignored by Git.
 - `docs/PHASE6_MODEL_FREEZE_RECORD.md` — this governance decision record.
 - `docs/PHASE6_MODEL_FREEZE_MANIFEST.json` — frozen configuration and SHA-256 evidence.
