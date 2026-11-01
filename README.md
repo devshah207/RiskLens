@@ -117,3 +117,7 @@ The earlier standalone **offline HTML Citi demo** is accessible through `bash sc
 - Explainability is retrospective, noncausal and model-instance specific; no original fitted weights archive exists.
 - Results do not validate investment utility, alert thresholds, Citi deployment, live trading or regulatory capital adequacy.
 - **No GitHub push without explicit owner permission for that push; no PR merge without separate explicit permission.**
+
+## Phase 7 — Financial-document RAG research prototype
+
+The XBRL-first PDF/Groq research pipeline and its measured limitations are documented in [Phase 7 research results](docs/phase7/README.md). This component is experimental; the original 34-question benchmark was used during development. No raw annual-report PDFs, original XML filings, Groq keys or local indexes are bundled.
