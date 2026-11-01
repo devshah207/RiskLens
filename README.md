@@ -1,123 +1,147 @@
-# RiskLens — Explainable Financial Risk Modeling, Validation & AI Research Platform
+# RiskLens
 
-**Research prototype | Python · XGBoost · PyTorch LSTM · Optuna · pandas · scikit-learn · model monitoring · historical VaR**
+**Financial risk analytics + source-grounded financial-document research**  
+*Research workbench · Python · XGBoost · PyTorch LSTM · NSE XBRL · BM25/MiniLM · Groq · Streamlit*
 
-**Project status (30 October 2026):** Phases 1–5 are complete for the agreed research scope. Phase 6's scientific investigations, evidence freeze, retrospective monitoring audit and governance documents are implemented and reviewed; formal Phase 6 sign-off requires approval and merge of [draft PR #6](https://github.com/devshah207/RiskLens/pull/6). Phases 7–10 remain part of the original plan: evaluated financial-report RAG, an integrated Streamlit app, portfolio packaging, and detailed Citi/StockGro interview defense. See [the canonical 10-phase roadmap](docs/ROADMAP.md).
+RiskLens brings two **separate but complementary** finance-research workflows together in a local Streamlit application:
 
-> **Research boundary:** RiskLens is not a trading product, credit default model, regulatory capital engine, production alerting system or investment recommendation. The 2025–September 2026 independent holdout has **already been opened once**. Do not retrain, rescore it for new model selection, optimize thresholds, or promote a candidate based on those outcomes.
+1. **Market Risk Analytics** reads saved historical results for a frozen NIFTY 50 next-session downside classifier. It presents model performance, probabilities, calibration, historical Value at Risk (VaR), explainability, feature drift, and governance. It does **not** train models, rescore the holdout, or produce live trading signals.
+2. **Financial Research Assistant** answers questions using exact facts in the owner's original NSE XBRL filings first, then the existing indexed annual-report PDF retrieval and **optional, explicitly authorized** Groq fallback. It displays the actual answer, source references, financial units, and uncertainty status.
 
-## Research question and timing contract
+**Status (2 November 2026):** Phases 1–6 are complete and their historical model selection is frozen ([Phase 6 PR #6](https://github.com/devshah207/RiskLens/pull/6)). The Phase 7 XBRL/PDF research prototype was merged ([PR #7](https://github.com/devshah207/RiskLens/pull/7)). The premium local Streamlit application was merged as [Phase 8 PR #8](https://github.com/devshah207/RiskLens/pull/8); its final branch CI completed successfully. Phase 9 publishes truthful documentation, recruiter-facing narratives and a controlled demo guide. Phase 10 remains the comprehensive, beginner-first technical interview learning phase. The application runs locally; a public hosted Streamlit deployment is **not** claimed.
 
-At the **close of NIFTY 50 trading session `t`**, estimate the probability that the price index's **next observed session** closes at least 1% lower:
+> **Research limitations:** RiskLens is **not** a production trading system, investment recommendation, credit-default model, bank-regulatory capital tool, or independently audited accounting advisor. Original fitted holdout model weights were not archived. The final holdout was opened once and will not be reused to change the models. Financial-document answers are not independently human-certified.
 
-```text
-event_t = 1 if close[t+1] / close[t] - 1 <= -0.01 else 0
-P(event_t = 1 | information available at NIFTY close t)
-```
+## Screens at a glance
 
-The future close appears **only in historical outcomes**. Training/validation splits are expanding chronological folds with cross-boundary label purges. Inputs include nine current/past NIFTY-derived features plus strictly *earlier-dated* India VIX and previous completed S&P 500 return. External observations must be no more than seven calendar days old. Original market CSVs and research outputs remain local and are ignored by Git; this repository commits code, synthetic tests, documentation and evidence fingerprints instead.
+| Streamlit page | What it shows | What it never does |
+|---|---|---|
+| **Market Risk Analytics** | Original saved Phase 5/6 evidence: 433 final-session forecasts, model comparison, calibration, VaR, TreeSHAP, LSTM sensitivity, drift | Retrain, modify threshold/features, rerun the one-time holdout, fetch live prices |
+| **Financial Research Assistant** | Source-backed financial answers from XBRL or PDF/Groq, displayed prominently with citations and review status; offline recorded examples | Treat PDF similarity as certified numeric truth; call Groq on launch; store credentials in the repo |
 
-## Architecture and what actually exists
+**Portfolio screenshots:** screenshots of the approved premium interface have not been included in this release. The [safe capture guide](docs/PHASE9_PORTFOLIO_WALKTHROUGH.md) documents how to add them later, from a real working instance. Do not reuse older pre-premium screenshots or invent a successful RAG answer.
+
+## Architecture
 
 ```mermaid
-flowchart LR
-  A[NIFTY 50 OHLC] --> D[Validated causal feature history]
-  B[Prior-dated India VIX] --> D
-  C[Previous completed S&P 500 return] --> D
-  D --> E[Purged expanding yearly folds]
-  E --> F[Fixed 11-feature XGBoost]
-  E --> G[Trial 86 LSTM: 45-session windows]
-  F --> H[Aligned probability predictions]
-  G --> H
-  H --> I[Development validation / one-time holdout]
-  A --> J[Rolling 250-return historical VaR]
-  I --> K[Score and feature drift / risk register]
-  J --> K
-  F --> L[Development TreeSHAP]
-  G --> M[Development permutation sensitivity]
-  L --> K
-  M --> K
+flowchart TB
+  subgraph Risk[Market Risk Analytics — Phases 1–6]
+    A[NIFTY 50 OHLC + earlier-dated VIX/S&P500] --> B[Validation + 11 causal features]
+    B --> C[Historical chronological development]
+    C --> D[Frozen fixed XGBoost champion + Optuna LSTM #86 challenger]
+    D --> E[Saved predictions + final metrics + calibration]
+    A --> F[Separate historical VaR]
+    E --> G[Saved SHAP + sensitivity + PSI + governance]
+    F --> G
+  end
+  subgraph Research[Financial Research — Phase 7]
+    X[Original FY2025 NSE XBRL XML] --> Y{Exact company/concept/year/scope/unit?}
+    Y -->|Yes| Z[XBRL source-backed answer]
+    Y -->|No| P[Existing indexed annual-report PDFs]
+    P --> Q[BM25 + MiniLM retrieval]
+    Q --> R[Existing PDF evidence checks + optional Groq]
+    R --> S[Answer / needs review / abstain / provider unavailable]
+  end
+  E --> UI[Streamlit Phase 8: two clearly separated pages]
+  G --> UI
+  Z --> UI
+  S --> UI
 ```
 
-**Frozen 11-feature order:** `return_1d`, `return_5d`, `volatility_20d`, `intraday_range`, `intraday_return`, `opening_gap`, `rsi_14`, `ema_50_distance`, `volatility_10d`, `india_vix_level`, `sp500_previous_return_1d`.
+The two subsystems share **an analyst interface, not a training dataset**. FY2025 company annual reports were *not* historical features of the NIFTY classifier. The PDF/Groq route is used only when the exact XBRL route cannot answer; a similar-looking XBRL tag must not be substituted for another concept.
 
-- **Preselected research champion:** fixed XGBoost, 80 trees, depth 2, learning rate 0.04, and the other parameters frozen in [`docs/PHASE6_MODEL_FREEZE_MANIFEST.json`](docs/PHASE6_MODEL_FREEZE_MANIFEST.json).
-- **Challenger:** actual completed Optuna LSTM study **trial #86**, 11 features, 45 consecutive sessions, two recurrent layers, hidden size 24, dropout 0.3413771488170494, 24 epochs, batch 128. Original one-time holdout fitting seed was 4051. The stored Optuna SQLite study provenance was verified; no fresh tuning is authorized.
-- **Separate historical model:** `models/sequence_lstm.py` implements an older 30-session LSTM with LayerNorm/MLP and different training policy. Its historical evaluation is retained but **must not** be confused with frozen trial #86.
-- **VaR:** a separate rolling 250-return historical simulation at 95% and 99%; it is not a prediction from either classifier.
-- **Interpretation:** native XGBoost TreeSHAP on pre-2025 development training observations (log-odds contributions); LSTM temporal-feature permutations on 2024 development predictions. Neither is causal attribution nor explanation of archived final-holdout weight objects. The original final fitted weights were not serialized.
+## Scientific results: one-time held-out evaluation
 
-## Measured frozen-model results
+**Question:** After market close on session *t*, estimate the probability that the NIFTY 50 close on the **next completed trading session** will be at least 1% lower.
 
-**Original one-time out-of-time holdout:** 433 aligned forecast dates from 2025 through **29 September 2026**, 42 downside events. These results are already observed and must not become a new selection objective.
+**Frozen evaluation:** 433 matched historical sessions from 2025 through September 2026, with **42** actual downside events. Model selection and hyperparameters were locked **before** the holdout was opened.
 
-| Frozen candidate | ROC-AUC ↑ | Average precision ↑ | Brier ↓ | Log loss ↓ |
+| Frozen model | ROC-AUC ↑ | Average precision ↑ | Brier ↓ | Log loss ↓ |
 |---|---:|---:|---:|---:|
-| **Fixed XGBoost — preselected champion** | 0.672756 | 0.186103 | 0.084773 | 0.303295 |
-| **Actual Optuna trial #86 LSTM — challenger** | 0.684874 | 0.218973 | 0.084299 | 0.300362 |
+| **Fixed XGBoost, preselected champion** | 0.67275606 | 0.18610282 | 0.08477265 | 0.30329503 |
+| **Optuna LSTM trial #86, challenger** | 0.68487395 | 0.21897271 | 0.08429920 | 0.30036197 |
 
-The LSTM scored numerically better on the pooled holdout, **but that does not authorize a post-hoc champion switch or establish statistically reliable superiority**. At the illustrative 0.50 classification cutoff both models predicted **zero** positive events, detecting **0/42** actual downside events. They are research probability estimators, not validated automatic alerts.
+The LSTM's slightly better holdout scores **do not** justify switching the preselected champion. At the original **0.50 cutoff, both models flagged zero positives**: TN=391, FP=0, FN=42, TP=0, hence **zero recall** for the 42 actual declines. AUC measures probability ranking; this is not a proven automatic decline-alert system.
 
-| Holdout period | Forecasts | Downside events | XGBoost ROC-AUC | LSTM ROC-AUC |
-|---|---:|---:|---:|---:|
-| 2025 | 249 | 15 (6.02%) | 0.693447 | 0.715385 |
-| Jan–Sep 2026 | 184 | 27 (14.67%) | 0.619486 | 0.636943 |
+**Independent historical VaR:** On the same 433 sessions, 95% VaR had **30 breaches (6.93%, versus 5% expected)** and 99% VaR had **7 breaches (1.62%, versus 1% expected)**. The 95% test raised independence/conditional-coverage concerns, including a March 2026 concentration. VaR is **not** an XGBoost/LSTM prediction. PSI signals historical feature/score shifts and does not prove why they occurred. SHAP and LSTM sequence permutation are descriptive, **not causal**.
 
-**Historical VaR on the same 433 dates:** 95% VaR had 30 exceptions (6.93%); the *unconditional* exact binomial p-value was 0.0763, but the *independence* and *conditional-coverage* approximate p-values were 0.0140 and 0.0107, respectively. The 99% VaR had 7 exceptions (1.62%; exact binomial p=0.216). March 2026 concentrated nine 95% and four 99% exceptions. These are model-risk findings, not claims of regulatory failure or known external causes.
+Authoritative methodology: [`docs/PHASE6_MODEL_FREEZE_RECORD.md`](docs/PHASE6_MODEL_FREEZE_RECORD.md), [`docs/PHASE6_MODEL_FREEZE_MANIFEST.json`](docs/PHASE6_MODEL_FREEZE_MANIFEST.json), [`docs/PHASE5_HOLDOUT_FINDINGS.md`](docs/PHASE5_HOLDOUT_FINDINGS.md). Historical Phase 6 documents may still say "review branch"; the later PR #6 merge supersedes that release status, **not** their scientific numbers.
 
-**Monitoring:** Input drift affected EMA-50 distance, RSI-14 and India VIX; independent indicator reconstructions and VIX source overlap did not establish a calculation bug. Original fixed-bin score PSI was **0.06829 (XGBoost)** and **0.47019 (LSTM)**. A saved-prediction audit verified both and found within-final-model 2025-versus-2026 PSI of approximately **0.42518** and **0.42334**, respectively. Comparing pooled annual development refits against the single final fitted instance is confounded; the whole PSI shift cannot be uniquely assigned to the market regime. These are descriptive research diagnostics, not bank-approved alarms.
+## Financial research: published Phase 7 outcomes
 
-For full results, methods and limitations see:
+Original corpus: **five genuine FY2025 PDFs** for **four companies** (Reliance Industries, HDFC Bank, Infosys, ICICI Bank), plus **eight original NSE XBRL XML filings** (standalone and consolidated).
 
-- [`docs/PHASE5_HOLDOUT_FINDINGS.md`](docs/PHASE5_HOLDOUT_FINDINGS.md) and [`docs/PHASE6_MODEL_FREEZE_RECORD.md`](docs/PHASE6_MODEL_FREEZE_RECORD.md)
-- [`docs/RiskLens_Phase6_Review_Draft.md`](docs/RiskLens_Phase6_Review_Draft.md) — scientific memo, **pending owner approval / merge**
-- [`docs/RiskLens_Phase6_Saved_Prediction_PSI_Audit_2026-10-30.md`](docs/RiskLens_Phase6_Saved_Prediction_PSI_Audit_2026-10-30.md) — saved-prediction monitoring analysis
+| Result on the repeatedly exposed 34-question development benchmark | Count |
+|---|---:|
+| Source-supported numerical/explanatory answers | **18** |
+| Correct refusals of unsupported future-year questions | **6** |
+| Incorrect refusals (answer was available in the original PDF) | **4** |
+| Not run end-to-end | **6** |
 
-## Historical development work (preserved, not the frozen challenger)
+These were assistant-reviewed against known source pages where applicable; they are **not** independent human certification or blind generalization results. Do **not** divide 18 by 34 and label it ordinary model accuracy. See [`docs/phase7/README.md`](docs/phase7/README.md) for released evidence and limitations.
 
-The earlier **manually designed 30-session** LSTM benchmark evaluated 1,238 predictions during 2020–2024 and recorded approximately Brier **0.10320**, ROC-AUC **0.583** for its 11-feature sequence model versus fixed XGBoost Brier **0.10280**, ROC-AUC **0.612**. These older numbers belong to that *different experiment*. The genuine trial #86 LSTM achieved development-only pooled Brier **0.10260**, ROC-AUC **0.61936** across 2020–2024; XGBoost's aligned frozen comparison was Brier **0.10282**, ROC-AUC **0.60949**. Optuna's 2020–2022 selection years and repeatedly examined 2023–2024 years are **not** independent test evidence.
+## Run the premium Streamlit app locally (macOS / Python 3.11+)
 
-## Installation and safe checks
-
-Requirements: Python **3.11+**; Apple Silicon MPS for PyTorch is supported, but not required for these read-only checks.
+Use the **existing RiskLens checkout**, not an unrelated generated project. Activate its virtual environment and install only the app and test dependencies:
 
 ```bash
-python -m pip install -e '.[dev,deep,tuning]'
-python -m pytest -q
-ruff check src tests scripts --select F,E4,E7,E9
+cd ~/Downloads/RiskLens
+source .venv/bin/activate
+python -m pip install -e '.[ui,dev]'
+PYTHONPATH=.:src python -m pytest -q tests/test_phase8_*.py
+python -m streamlit run app/Home.py
+```
+
+Then open `http://localhost:8501`. The local UI only needs pandas, Streamlit and Plotly plus the project's normal base package to view saved market evidence. The released `ui` optional extra includes `streamlit>=1.41,<2` and `plotly>=6,<7`.
+
+### Local evidence and real RAG inputs
+
+All original raw files and many generated outputs are deliberately kept **outside public Git**. The UI reads these **without rewriting them**:
+
+- Saved market study: `data/processed/phase5_final_holdout/final_holdout_predictions.csv`, `final_holdout_report.json`, `final_holdout_reliability.csv`; earlier and Phase 6 files under `data/processed/phase4_validation/` and `data/processed/phase6_*/`.
+- The eight original NSE XBRL XML filings in `$HOME/Downloads/Archive.zip`.
+- Original PDF SQLite index: `data/processed/research/real_acceptance/real_index.sqlite3`.
+- Five annual-report PDFs in `data/raw/research_reports/`.
+- Three saved fact banks under `data/processed/research/real_acceptance/phase7_completion/` (V3, V4 and V6 JSON).
+
+To perform *real-source offline* PDF retrieval, the original MiniLM model must already be installed/cached and the research dependencies configured. The PDF route can retrieve pages without generating a final answer when Groq is disabled. **This is expected**, and candidate pages are not certified citations.
+
+Only if using the real research backend and you need its optional components, install the required existing research extras:
+
+```bash
+python -m pip install -e '.[research-all]' lxml
+```
+
+**Groq is never required merely to view the dashboard.** Live Groq requests require an explicit checkbox and user action, use the owner's local `GROQ_API_KEY` and may make multiple API calls for one question. API keys must never be committed, uploaded or logged. Do not use other keys/accounts to work around quotas.
+
+For detailed setup and a safe offline check, see [`docs/PHASE8_PREMIUM_UI_GUIDE_2026-11-02.md`](docs/PHASE8_PREMIUM_UI_GUIDE_2026-11-02.md), and the read-only preflight script `python scripts/phase8_rag_preflight.py --pdf-offline`.
+
+## Quality and reproducibility
+
+```bash
+# Safe: existing app tests, no network/Groq or scientific reruns
+PYTHONPATH=.:src python -m pytest -q tests/test_phase8_*.py
+ruff check src tests scripts app --select F,E4,E7,E9
 python scripts/verify_phase6_freeze.py
 ```
 
-`verify_phase6_freeze.py` verifies the original protected local evidence hashes and model-selection contract **without fitting or scoring models**. A successful run requires original ignored files to exist at their recorded paths; it does not mean original fitted model weights were archived. The repo's GitHub CI uses synthetic test data, not your ignored market CSVs.
+The freeze verifier is **read-only** but requires the complete original protected local files. If they are missing, it cannot report 9/9 PASS; do not regenerate holdout results to satisfy it. Some Phase 7 tests are skipped without original PDFs/JSON/XML. Skipped tests are not passes. Consult [`docs/PHASE9_RELEASE_CHECKLIST.md`](docs/PHASE9_RELEASE_CHECKLIST.md) for the release audit and CI gates.
 
-**Do not run** `risklens evaluate-holdout`, `risklens tune` or `risklens evaluate-frozen` as a routine verification step. The holdout is already opened, the Optuna study is frozen, and these commands are for historical research workflows rather than Phase 6 sign-off.
+The [GitHub CI workflow](.github/workflows/quality.yml) installs the **UI extra** with the original development, deep-learning and tuning extras, then runs lint and the repository test suite. It **must not** silently skip real failures.
 
-The earlier standalone **offline HTML Citi demo** is accessible through `bash scripts/run_citi_demo.sh` but remains the *legacy development demo*, not the completed Phase 8 Streamlit app.
+## Repository map and presentation
 
-## Code and artifacts map
-
-| Path | Purpose |
+| Path | Responsibility |
 |---|---|
-| `src/risklens/data/`, `src/risklens/features/` | Market ingestion, point-in-time alignment, causal feature/label engineering |
-| `src/risklens/models/frozen_comparison.py`, `optuna_research.py` | Historical frozen trial #86 verification and development comparison |
-| `src/risklens/evaluation/final_holdout.py` | Historical one-time final evaluation; **do not rerun** |
-| `src/risklens/evaluation/risk_validation.py` | Calibration, paired Brier uncertainty and separate VaR tests |
-| `src/risklens/evaluation/monitoring.py`, `feature_drift.py`, `drift_investigation.py` | Model-output monitoring, feature PSI and source/formula investigation |
-| `src/risklens/models/explainability.py`, `lstm_explainability.py` | TreeSHAP and noncausal LSTM sensitivity |
-| `scripts/verify_phase6_freeze.py`, `tests/test_phase6_freeze.py` | Original-evidence verification and synthetic regression coverage |
-| `data/processed/phase4_validation/`, `phase5_final_holdout/`, `phase6_*/` | Real research artifacts on user Mac, **ignored by Git** |
-| `docs/` | Roadmap, immutable protocols, audit findings, freeze/governance records |
+| `app/Home.py`, `app/pages/` | Premium Streamlit home, market risk, financial research pages |
+| `app/components/` | Shared UI, source citations and Plotly charts |
+| `app/services/` | Read-only saved-data adapters and calls into the original Phase 7 engine |
+| `src/risklens/features/`, `src/risklens/models/`, `src/risklens/evaluation/` | Original historical market research (frozen) |
+| `src/risklens/research/` | Original Phase 7 XBRL, PDF, retrieval and Groq research engine |
+| `docs/` | Protocols, evidence governance, methods, release notes and portfolio guidance |
+| `scripts/phase8_rag_preflight.py` | Safe offline original-source integration check |
+| `scripts/verify_phase6_freeze.py` | Read-only original evidence fingerprint verifier |
 
-**Next engineering work after Phase 6 governance merge:** Phase 7 — evaluated, citation-grounded financial filings retrieval and AI research assistant; then Phase 8 Streamlit integration, Phase 9 portfolio and compliance packaging, and Phase 10 comprehensive technical interview defense.
+For a short recruiter walkthrough, source selection notes and safe screenshot instructions, see [`docs/PHASE9_PORTFOLIO_WALKTHROUGH.md`](docs/PHASE9_PORTFOLIO_WALKTHROUGH.md). For concise Citi and StockGro resume claims, see [`docs/PHASE9_RESUME_AND_INTERVIEW_NARRATIVES.md`](docs/PHASE9_RESUME_AND_INTERVIEW_NARRATIVES.md).
 
-## Scientific and governance limits
-
-- Strict earlier-dated joins and local structural validation do not independently certify source vendor publication timestamps or redistribution rights.
-- Risk metrics are sample- and regime-sensitive; the 2026 period ends in September, not December.
-- Explainability is retrospective, noncausal and model-instance specific; no original fitted weights archive exists.
-- Results do not validate investment utility, alert thresholds, Citi deployment, live trading or regulatory capital adequacy.
-- **No GitHub push without explicit owner permission for that push; no PR merge without separate explicit permission.**
-
-## Phase 7 — Financial-document RAG research prototype
-
-The XBRL-first PDF/Groq research pipeline and its measured limitations are documented in [Phase 7 research results](docs/phase7/README.md). This component is experimental; the original 34-question benchmark was used during development. No raw annual-report PDFs, original XML filings, Groq keys or local indexes are bundled.
+**Contributors:** RiskLens educational research project. Source filings and market datasets remain subject to their original providers' licensing, attribution and redistribution terms; do not commit or distribute them merely because the local app can open them.
