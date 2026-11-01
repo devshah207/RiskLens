@@ -13,6 +13,7 @@ dependencies = ["pandas>=2.2,<3", "numpy>=1.26,<3", "scikit-learn>=1.4,<1.10", "
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "ruff>=0.9,<1"]
+ui = ["streamlit>=1.41,<2", "plotly>=6,<7"]
 deep = ["torch>=2.2,<3"]
 tuning = ["optuna>=4,<5", "torch>=2.2,<3"]
 research-base = ["pymupdf>=1.24,<2"]
