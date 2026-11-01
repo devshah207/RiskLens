@@ -1,66 +1,73 @@
 # RiskLens — Canonical 10-Phase Roadmap
 
-**Project:** Explainable Financial Risk Modeling, Validation & AI Research Platform
-**Status reviewed:** 30 October 2026
-**Scope authority:** This **ten-phase** plan supersedes all abbreviated project outlines. No phase may be silently omitted, renamed into an unrelated deliverable, or marked complete from superficial outputs.
+**Status reviewed: 2 November 2026.** This is the authoritative current project-phase summary; historical phase-specific reports preserve the evidence and dates available when written.
 
-**Execution priority:** Build, test and verify all engineering deliverables, then complete deep line-by-line finance/ML/code education and interview defense in Phase 10. Provide concise design rationale while implementing; do not cancel the teaching requirement.
+| Phase | Name | Status | Evidence / boundary |
+|---|---|---|---|
+| 1 | Financial foundations, scope, environment | **Complete** | Target, data contract, reproducible package |
+| 2 | Historical finance data and quality | **Complete for agreed research scope** | NIFTY/VIX/S&P inputs validated; provenance/licensing timing caveats remain |
+| 3 | EDA and 11-feature engineering | **Complete** | Chronological feature construction and leakage controls |
+| 4 | Training, chronological development and model freeze | **Complete** | Fixed XGBoost champion; Optuna LSTM trial #86 challenger; no retuning |
+| 5 | One-time out-of-time risk validation | **Complete as research** | 433 held-out sessions, 42 events; 0% recall at 0.50; VaR concerns disclosed |
+| 6 | Explainability, drift and governance | **Complete and merged** | [PR #6](https://github.com/devshah207/RiskLens/pull/6); original evidence freeze preserved |
+| 7 | XBRL-first PDF/Groq financial research | **Implemented and merged; research limitations documented** | [PR #7](https://github.com/devshah207/RiskLens/pull/7); 34 exposed questions: 18 supported, 6 correct refusals, 4 incorrect refusals, 6 unrun |
+| 8 | Premium Streamlit app and source integration | **Implemented and merged** | [PR #8](https://github.com/devshah207/RiskLens/pull/8); local-first UI; final Phase 8 CI passed |
+| 9 | README, portfolio, truthful resume narratives and release audit | **Documentation release** | README + `docs/PHASE9_*.md`, source-only changes, CI checks; see release notes |
+| 10 | Beginner-first technical study and Citi/StockGro interview defense | **Next phase** | Explain real code, algorithms, risk mathematics, RAG verification, limitations and mocks |
 
-## Phase 1 — Financial foundations, project definition and environment
-Define risk question, NIFTY 50 instrument, post-close forecast time, 1% next-session downside label, environment, reproducibility and project charter.
+## Rules that remain in force
 
-**Status: COMPLETED.** Charter, working Python package, setup, data contract and finance background documentation created.
+1. The independent 433-row 2025–September 2026 holdout was already opened once. **Do not rerun it, tune against it, change the 0.50 threshold based on it, or switch the selected champion.**
+2. The preselected XGBoost is still champion; a higher holdout AUC for the frozen LSTM challenger does not authorize switching models.
+3. AUC is a ranking measure; at the **original 0.50 cutoff, recall was zero** for both classifiers. Historical VaR is separate, with coverage/exception-clustering concerns.
+4. The XBRL/PDF/Groq research assistant uses original company filings for separate analyst questions. Company PDFs **were never predictors** in the NIFTY classifier. Exact XBRL facts precede PDF retrieval. PDF candidate pages are not automatically certified answers.
+5. The exposed Phase 7 benchmark is not an independently blind, human-audited evaluation. No 100% correctness, live production, or public deployment is claimed.
+6. Original fitted estimator binaries were not archived. The Streamlit market dashboard displays **saved research evidence**, not current trading predictions.
+7. Never commit API keys, original vendor data, raw report PDFs, original XBRL archives, large private SQLite research indexes, or training results not intended for publication. Live Groq requires explicit consent.
+8. Keep model and Phase 7 source code fixed while preparing interview documentation and demonstrations. Phase 10 teaching is **not cancelled**.
 
-## Phase 2 — Financial data collection and quality assurance
-Multi-year NIFTY OHLC, earlier-dated India VIX and completed S&P 500 inputs; ingestion, provenance, date and numerical validation, source fingerprinting, missingness and anomaly rules.
+## Next: Phase 10
 
-**Status: COMPLETED for agreed research scope.** Validated 2016–September 2026 local market records and point-in-time integration. Remaining vendor-release-time authenticity / licensing caveats are documented; they are not silently assumed solved.
+The work now shifts from changing code to mastering it: beginner-first concept definitions, full mathematics and derivations, module-by-module explanations, concise and technical interview answers, failure-case defense, and structured Citi Risk Management / StockGro Data Science mock interviews.
 
-## Phase 3 — Exploratory analysis and financial feature engineering
-Reproducible distributional EDA, returns/volatility/RSI/EMA/market features, chronology, no look-ahead, exact target and training boundary purge.
+## Technical scope and lessons retained from the original roadmap
 
-**Status: COMPLETED.** Eleven frozen causal features and labeled research dataset.
+### Phase 1 — Foundations
 
-## Phase 4 — Model training and hyperparameter optimization
-Historical constant/logistic baselines, XGBoost, earlier LSTM, real Optuna LSTM trials, strict expanding 2020–2024 development validation and model/parameter freeze.
+Defined an index-level downside-event question after the daily NIFTY close, its chronology contract, reproducibility standards, Python environment, risk vocabulary and project charter.
 
-**Status: COMPLETED.** Fixed 11-feature XGBoost remains preselected research champion. Real Optuna **LSTM trial #86**, 45-session lookback, remains challenger. Original Optuna SQLite provenance and development reports verified. 2020–2022 Optuna selection and repeatedly inspected 2023–2024 diagnostics are not untouched tests. **Do not launch more trials.**
+### Phase 2 — Market evidence
 
-## Phase 5 — Independent risk-model validation
-Brier and log loss, ROC-AUC/AP, annual calibration/discrimination, historical 95%/99% VaR exception coverage and independence, paired development uncertainty, independently controlled once-only out-of-time holdout.
+Used multi-year NIFTY OHLC history with earlier-dated India VIX and previously completed S&P 500 information. Validated numerical values, missing sessions, data coverage, financial data timing and source files. Vendor release-time and redistribution guarantees must not be inferred merely from market-date alignment.
 
-**Status: COMPLETED as research validation, with limitations.** Original **433-row**, **42-event** 2025–September 2026 holdout executed **once** on user Mac; existing results, saved-prediction fingerprints and VaR exception chronology reviewed. Holdout XGBoost Brier 0.084773; LSTM #86 Brier 0.084299. Both have zero recall at 0.50; 95% VaR exception independence/conditional coverage flags are disclosed. This is not an independent bank or deployment sign-off. See `docs/PHASE5_HOLDOUT_FINDINGS.md` and Phase 6 scientific review. **Do not rerun the holdout.**
+### Phase 3 — Exploratory study
 
-## Phase 6 — Explainability, monitoring and model-risk reporting
-Fixed XGBoost TreeSHAP, LSTM feature sensitivity, model-score/input-feature PSI, annual performance/calibration, three-feature root-cause audit, exploratory feature hypotheses, seed robustness, freeze evidence, model-risk register and governance decision.
+Studied returns, volatility and directional balance, RSI and EMA features, earlier-dated external information, label construction and chronology-purged development splits. The eleven selected features were frozen before the independent final period was accessed.
 
-**Status: SCIENTIFIC WORK COMPLETE; FINAL GOVERNANCE MERGE PENDING.** Real outputs inspected; 8-variant ablation + seven-seed testing support no model alteration. Saved-prediction PSI audit reproduced XGBoost 0.06829/LSTM 0.47019 and documented non-identical development/holdout model-instance comparator. Local freeze verifier **PASS 9/9** and **303 local tests passed**; the relevant review-branch GitHub Actions test/lint run passed. Review documents and verifier are on [draft PR #6](https://github.com/devshah207/RiskLens/pull/6); owner approval and **separate authorization to merge** are required before formal Phase 6 closure. No new scientific experiment is a prerequisite, and documented risks are not evidence of operational validation.
+### Phase 4 — Model development
 
-## Phase 7 — Financial-report RAG and AI research assistant
-Legally usable genuine financial filings; versioned source provenance; page/section-aware extraction and chunking; lexical and embedding retrieval comparison; cited evidence-grounded LLM answers and abstention; injection/privacy safeguards; manually verified gold-set evaluation including numeric, multi-year, no-answer and adversarial questions.
+Compared simple baselines, XGBoost and PyTorch LSTM models on historical expanding validation windows. Optuna was used for the LSTM. The fixed 11-feature XGBoost research champion and LSTM trial #86 (45-session lookback) challenger were predeclared; repeatedly inspected development-year results are not untouched tests.
 
-**Status: NOT STARTED.** Must deliver a real tested, evaluated end-to-end research assistant, not a single demonstration prompt or an unevaluated vector index.
+### Phase 5 — Independent financial validation
 
-## Phase 8 — Application, testing and integration
-**Streamlit** app with separate Risk Analytics and Financial Document Research pages, reusable typed back-end services, loaded frozen saved evidence, integration/smoke tests, clear limitation display and controlled access to documents.
+Scored one sealed 2025–September 2026 holdout **once**, saving all 433 probability pairs and labels and the evaluation report. Reported ROC-AUC, average precision, Brier, log loss, annual discrimination and calibration, and 95%/99% independent historical VaR coverage/independence evidence. Both classifiers missed all 42 decline events when thresholded at 0.50. A separate prospective test would be required to approve any new alert policy.
 
-**Status: NOT STARTED.** The existing offline HTML Citi development dashboard does **not** satisfy this phase.
+### Phase 6 — Explainability and monitoring
 
-## Phase 9 — GitHub, documentation and resume preparation
-Reproducible setup, architecture and data-flow diagrams, CI/test/demo evidence, truthful current metrics, privacy/license and secrets audits, honest Citi and StockGro project narratives/resume bullets and usable walkthrough.
+Saved fixed XGBoost TreeSHAP, LSTM temporal permutation sensitivity, score and input-feature population stability, model risk register, seed stability and investigation of EMA50 distance, India VIX and RSI14 drift. The source audit and freeze-manifest checks defend the recorded findings; drift and explanation are not causal proofs. Evidence governance was merged in [PR #6](https://github.com/devshah207/RiskLens/pull/6).
 
-**Status: PARTIALLY STARTED, NOT COMPLETE.** Core repository, tests and governance docs exist. Further portfolio/demo/RAG-integrated packaging awaits Phases 7–8. Historical records must remain distinguishable from current frozen-study findings.
+### Phase 7 — Company disclosures
 
-## Phase 10 — Complete technical-interview defense
-After implementing Phases 1–9: explain actual modules and engineering decisions line by line, finance/ML math and alternatives, failure studies, temporal leakage, validation, sensitivity, MPS/Optuna, RAG/citations/security, limitations, and mock Citi RMS + StockGro DS/ML interviews.
+Integrated genuine FY2025 annual-report PDFs and eight NSE XBRL filings for four companies. Chose exact XBRL accounting-tag/period/scope/unit matching before lexical BM25 plus MiniLM PDF retrieval, optional Groq answer generation, and conservative refusals/review labels. The published exposed 34-case result and errors belong to an educational prototype, not a reliable production financial advisor. See [Phase 7 evidence](phase7/README.md).
 
-**Status: NOT STARTED as the comprehensive final learning/defense.** Teaching deliberately deferred for implementation speed, **never cancelled**.
+### Phase 8 — Application
 
-## Project-wide governance and completion rules
+Implemented the premium local Streamlit home, separate Market Risk and Financial Research views, interactive Plotly displays, an answer-first financial UI, read-only saved-evidence adapters and explicit Groq consent. Its existing tests, original-source offline preflight, privacy limitations and handover are documented in [the Phase 8 guide](PHASE8_PREMIUM_UI_GUIDE_2026-11-02.md) and [PR #8](https://github.com/devshah207/RiskLens/pull/8).
 
-1. Distinguish tested code, Mac execution, source/provenance evidence, model-risk interpretation, CI and owner governance approval; no claim of production readiness from a passing test.
-2. Do not alter or retune frozen XGBoost, genuine LSTM #86, 11 features, 2025–Sep 2026 holdout evidence, or Optuna SQLite source. New feature ideas/seed trials must not be promoted based on the opened holdout.
-3. Preserve ignored local raw/processed data and research CSVs; do not push vendor data, credentials or fitted model objects claimed to exist when no archive was created.
-4. Prefer focused reusable modules/CLIs with automated tests; avoid duplicated cleanup stages and endless small documentation loops.
-5. Each **new GitHub push** requires explicit owner permission. Each **merge** requires **separate explicit permission**, even if CI passes.
-6. Once the Phase 6 draft PR is approved/merged, begin Phase 7 without reopening completed experiments; a later prospective monitoring program remains a risk-register item, not a Phase 7 prerequisite.
+### Phase 9 — Portfolio release
+
+Publish precise onboarding instructions, architecture, CI status, reproducible demo, realistic outcomes, data-license/privacy boundaries, and separate Citi and StockGro resume narratives. Actual premium screenshots are optional future enhancements and must be captured from the real running app without personal data; no pre-premium or fabricated images are used.
+
+### Phase 10 — Interview mastery
+
+Start from the basics of index values and returns before advancing to the real project implementation: every feature and timing assumption, objective and gradient, imbalance and calibration, walk-forward and one-time holdout, VaR backtesting, SHAP, PSI, Optuna/LSTM, XBRL periods/units, PDF retrieval, Groq verification, security, code tests and realistic interview questions. Treat the existing source code as the authority and explain each limitation instead of memorizing inflated claims.
