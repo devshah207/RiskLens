@@ -48,7 +48,8 @@ def main():
         dimension=SentenceEmbedder.dimension
         def __init__(self):self._model=None
         def encode(self,txt):
-            if self._model is None:self._model=create_embedder('sentence')
+            if self._model is None:
+                self._model=create_embedder('sentence')
             return self._model.encode(txt)
     with ResearchStore(args.db) as store:
         if not store.list_documents():
@@ -59,4 +60,5 @@ def main():
             as_of=args.as_of,top_k=args.top_k,bank_dir=args.bank_dir,pdf_dir=args.pdf_dir)
     print(json.dumps(result,ensure_ascii=False,indent=2))
 
-if __name__ == '__main__':main()
+if __name__ == '__main__':
+    main()

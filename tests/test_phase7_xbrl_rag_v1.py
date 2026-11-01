@@ -1,6 +1,6 @@
 """Real-instance tests; source record matching uses no benchmark gold in answerer."""
+import os
 from pathlib import Path
-from decimal import Decimal
 import pytest
 
 from risklens.research.xbrl_rag_v1 import lookup_xbrl, load_filings, run_query_xbrl_first
@@ -8,7 +8,6 @@ from risklens.research.llm_guided_v7 import run_query
 
 ARCHIVE = Path(__file__).resolve().parents[3] / 'Archive(1).zip'
 # Tests may run on another machine with the archive passed via the env var.
-import os
 ARCHIVE = Path(os.environ.get('RISKLENS_XBRL_TEST_ARCHIVE', str(ARCHIVE)))
 
 @pytest.fixture(scope='session')

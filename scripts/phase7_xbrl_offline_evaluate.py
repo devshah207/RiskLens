@@ -75,8 +75,10 @@ def run(questions: Path, archive: Path, output: Path, db: Path | None = None,
             question = case['question']
             if store:
                 extra = {}
-                if bank_dir is not None: extra['bank_dir'] = bank_dir
-                if pdf_dir is not None: extra['pdf_dir'] = pdf_dir
+                if bank_dir is not None:
+                    extra['bank_dir'] = bank_dir
+                if pdf_dir is not None:
+                    extra['pdf_dir'] = pdf_dir
                 result = run_query_xbrl_first(store, embedder, question, provider='offline',
                                    ticker=case['ticker'], xbrl_archive=archive, **extra)
             else:
@@ -110,7 +112,9 @@ def run(questions: Path, archive: Path, output: Path, db: Path | None = None,
             store.conn.close()
     output.mkdir(parents=True, exist_ok=True)
     with (output/'results.csv').open('w',newline='',encoding='utf-8') as f:
-        writer=csv.DictWriter(f,fieldnames=list(rows[0]));writer.writeheader();writer.writerows(rows)
+        writer=csv.DictWriter(f,fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
     summary={
         'benchmark':'existing_34_questions_exposed_not_blind',
         'provider':'offline', 'mode':'xbrl_then_existing_pdf_rag' if db else 'xbrl_only_pdf_rag_not_run',

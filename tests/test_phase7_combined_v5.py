@@ -9,8 +9,14 @@ from risklens.research.combined_v5 import choose_fact_answer, explicit_segments,
 
 @pytest.fixture(scope='module')
 def banks():
-    return (read_facts('data/processed/research/real_acceptance/phase7_completion/financial_facts_v3.json'),
-            json.loads(Path('data/processed/research/real_acceptance/phase7_completion/financial_facts_auto_v4.json').read_text())['facts'])
+    # These are generated local research records, not part of the public source tree.
+    base = Path('data/processed/research/real_acceptance/phase7_completion')
+    curated_path = base / 'financial_facts_v3.json'
+    automatic_path = base / 'financial_facts_auto_v4.json'
+    missing = [str(path) for path in (curated_path, automatic_path) if not path.is_file()]
+    if missing:
+        pytest.skip('Optional generated Phase 7 fact banks unavailable: ' + ', '.join(missing))
+    return (read_facts(curated_path), json.loads(automatic_path.read_text())['facts'])
 
 
 def test_segment_parser_catches_ril_oil_gas():

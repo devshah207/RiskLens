@@ -38,9 +38,13 @@ def _contexts(root):
         start = period.find(f'{{{XBRLI}}}startDate')
         end = period.find(f'{{{XBRLI}}}endDate')
         if instant is not None and start is None and end is None:
-            kind = 'instant'; st = None; ed = (instant.text or '').strip()
+            kind = 'instant'
+            st = None
+            ed = (instant.text or '').strip()
         elif instant is None and start is not None and end is not None:
-            kind = 'duration'; st = (start.text or '').strip(); ed = (end.text or '').strip()
+            kind = 'duration'
+            st = (start.text or '').strip()
+            ed = (end.text or '').strip()
         else:
             raise ValueError(f'Unknown/mixed period in {cid}')
         # Any dimension must stay attached to the fact. It can change its meaning.
@@ -59,9 +63,11 @@ def _units(root):
     ans={}
     for u in root.findall(f'{{{XBRLI}}}unit'):
         uid=u.get('id')
-        if not uid or uid in ans: raise ValueError('Missing or repeated unit ID')
+        if not uid or uid in ans:
+            raise ValueError('Missing or repeated unit ID')
         measures=[(m.text or '').strip() for m in u.findall(f'.//{{{XBRLI}}}measure')]
-        if not measures: raise ValueError(f'Missing measure for unit: {uid}')
+        if not measures:
+            raise ValueError(f'Missing measure for unit: {uid}')
         ans[uid]=measures
     return ans
 
@@ -74,11 +80,13 @@ def parse_instance(path: str | Path):
     root=etree.parse(str(path),parser=xml_parser).getroot()
     if root.tag != f'{{{XBRLI}}}xbrl':
         raise ValueError('Expected an XBRL 2.1 XML instance. NSE web-view HTML/iXBRL needs Arelle.')
-    contexts=_contexts(root); units=_units(root)
+    contexts=_contexts(root)
+    units=_units(root)
     out=[]
     for el in root:
         context_id=el.get('contextRef')
-        if not context_id: continue
+        if not context_id:
+            continue
         if context_id not in contexts:
             raise ValueError(f'Unknown contextRef {context_id}')
         is_nil=el.get(f'{{{XSI}}}nil','false').lower()=='true'
@@ -93,7 +101,8 @@ def parse_instance(path: str | Path):
               'is_nil':is_nil,'decimals':el.get('decimals'),
               'precision':el.get('precision'), **contexts[context_id]}
         if unit_id and not is_nil:
-            try: data['numeric_value']=str(Decimal(raw))
+            try:
+                data['numeric_value']=str(Decimal(raw))
             except InvalidOperation:
                 raise ValueError(f'Invalid numeric fact {data["concept"]}: {raw!r}')
         out.append(data)
@@ -109,4 +118,5 @@ def main():
     Path(a.out).write_text(json.dumps(facts,indent=2,ensure_ascii=False)+'\n')
     print(f'Extracted {len(facts)} raw facts; no financial metric mapping inferred')
 
-if __name__=='__main__': main()
+if __name__=='__main__':
+    main()

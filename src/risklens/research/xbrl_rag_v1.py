@@ -8,7 +8,6 @@ No gold benchmark values or benchmark IDs are used to answer questions.
 """
 from __future__ import annotations
 
-from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
 from functools import lru_cache

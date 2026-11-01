@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import pytest
 from types import SimpleNamespace
 
 from risklens.research.answer import respond, _normalized_numbers
@@ -50,6 +51,8 @@ def test_unsupported_financial_figure_rejected():
 
 def test_unverified_source_gold_disclosed_as_provisional():
     seed = Path(__file__).resolve().parents[1] / "docs" / "phase7_independent_source_anchors.json"
+    if not seed.is_file():
+        pytest.skip('Optional Phase 7 source-anchor JSON is not in this checkout')
     obj = json.loads(seed.read_text())
     questions = obj["questions"]
     assert len(questions) == 20
