@@ -1,0 +1,7 @@
+[project]
+name = "risklens-educational"
+version = "0.1.0"
+
+[[tool.streamlit.component.components]]
+name = "story_explorer"
+asset_dir = "frontend/build"

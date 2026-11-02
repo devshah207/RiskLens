@@ -28,6 +28,10 @@ mini_stats(st, [
     ('Document corpus', '4', 'Companies in the original FY2025 study'),
 ])
 
+section(st, 'NEW / Interactive project tour')
+st.markdown('**Explore RiskLens before reading the implementation.** Follow animated data paths, open any stage, and switch between simple and technical explanations of the original code.')
+st.page_link('pages/3_Explore_RiskLens.py', label='Launch interactive architecture explorer', icon='🧭')
+
 section(st, 'Explore the workbench')
 st.markdown('''<div class="rl-feature-grid">
 <div class="rl-feature">
