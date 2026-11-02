@@ -5,7 +5,6 @@ browser, a research corpus, an API key, or model training.
 """
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
