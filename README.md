@@ -3,6 +3,12 @@
 **Financial risk analytics + source-grounded financial-document research**  
 *Research workbench · Python · XGBoost · PyTorch LSTM · NSE XBRL · BM25/MiniLM · Groq · Streamlit*
 
+
+
+https://github.com/user-attachments/assets/be1e645c-5b11-464f-a1fa-8cf7c405e345
+
+
+
 RiskLens brings two **separate but complementary** finance-research workflows together in a local Streamlit application:
 
 1. **Market Risk Analytics** reads saved historical results for a frozen NIFTY 50 next-session downside classifier. It presents model performance, probabilities, calibration, historical Value at Risk (VaR), explainability, feature drift, and governance. It does **not** train models, rescore the holdout, or produce live trading signals.
