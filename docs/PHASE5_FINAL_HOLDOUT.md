@@ -1,6 +1,8 @@
 # Phase 5 — One-time locked 2025–2026 final holdout
 
-**Implementation status:** Added to a dedicated code path with synthetic-only tests. Do **not** confuse this with a completed real-data independent evaluation. Real results can be produced only on your local, original market sources, after predeclared checks.
+> **CURRENT STATUS (13 November 2026): COMPLETED — HISTORICAL PRE-OPENING PROTOCOL.** The original one-time 2025–September 2026 out-of-time research evaluation has **already run** on **433 aligned dates with 42 downside events**; reports and saved predictions are in `data/processed/phase5_final_holdout/`. Read [Phase 5 holdout findings](PHASE5_HOLDOUT_FINDINGS.md) and the [current validation memo](CITI_MODEL_VALIDATION_MEMO.md). **Do not execute the historical commands below again or use this holdout for additional model selection.** This page preserves the original *before-opening* protocol and its contemporaneous prerequisites, which should not be mistaken for today's pending work.
+
+**Original pre-opening implementation status (historical, superseded by the completed holdout):** Added to a dedicated code path with synthetic-only tests. Do **not** confuse this with a completed real-data independent evaluation. Real results can be produced only on your local, original market sources, after predeclared checks.
 
 ## Frozen specification (established before opening)
 
