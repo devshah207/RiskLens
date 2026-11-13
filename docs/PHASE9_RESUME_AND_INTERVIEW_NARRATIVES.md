@@ -1,6 +1,6 @@
 # RiskLens — Citi / StockGro resume material and interview framing
 
-**Prepared:** 2 November 2026. Use only statements supported by the original saved study or merged Phase 7 evidence. A resume should fit the role; do not combine every tool into one inflated sentence.
+**Prepared:** 2 November 2026; **status and Citi pitch reconciled 13 November 2026**. Use only statements supported by the original saved study or merged Phase 7 evidence. A resume should fit the role; do not combine every tool into one inflated sentence.
 
 ## A. Citi — Risk Management internship
 
@@ -17,7 +17,7 @@
 
 ### 30-second Citi pitch
 
-> I built RiskLens to learn how a financial risk model should be evaluated responsibly. It predicts the probability of a next-session NIFTY 50 drop of at least 1% from information available after the previous close. I froze an XGBoost model and an Optuna LSTM before looking at the 433-session final holdout. I also evaluated independent 95% and 99% historical VaR, calibration, explanations and drift. A key finding was that both models missed all 42 declines at a fixed 0.50 threshold, so I reported that limitation instead of presenting the system as an approved risk alert.
+> I built RiskLens as an end-to-end financial risk analytics and model-validation workbench. It predicts the probability of a next-session NIFTY 50 drop of at least 1% from information available after the previous close. I froze an XGBoost model and an Optuna LSTM before looking at the 433-session final holdout. I also evaluated independent 95% and 99% historical VaR, calibration, explanations and drift. A key finding was that both models missed all 42 declines at a fixed 0.50 threshold, so I reported that limitation instead of presenting the system as an approved risk alert.
 
 ### Likely Citi defense
 
@@ -70,4 +70,7 @@
 | Frozen original model choice and 11 inputs | `docs/PHASE6_MODEL_FREEZE_MANIFEST.json` and record |
 | SHAP, PSI, sensitivity, VaR | Original Phase 6 saved artifacts and governance documents |
 | Phase 7 18 / 6 / 4 / 6 benchmark | `docs/phase7/README.md` on merged `main` |
-| Premium Streamlit UI and tests | [Phase 8 feature branch](https://github.com/devshah207/RiskLens/tree/feature/phase8-premium-streamlit-20261102), with original backend tests; not yet merged to `main` |
+| Premium Streamlit UI and tests | [merged Phase 8 PR #8](https://github.com/devshah207/RiskLens/pull/8), local Streamlit application and original backend tests |
+
+
+**Current Citi evaluation wording:** For the 1,238 archived 2020–2024 development predictions, fixed XGBoost ROC-AUC is **0.609487** (Brier **0.102824**), rather than an older unreproduced prose figure of 0.612. This is separate from the completed 433-date final holdout. For the full dated interview evidence reconciliation, see [Citi RMS RiskLens guide](CITI_RESUME_AND_INTERVIEW.md).
