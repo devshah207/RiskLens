@@ -4,6 +4,8 @@
 **Updated:** 30 October 2026
 **Status:** Retrospectively audited **research prototype**; Phase 6 owner governance sign-off pending. This is **not** a Citi-approved model or an independent bank validation opinion.
 
+> **13 November 2026 reconciliation:** The above 30 October phase-governance status is historical; Phase 6 was subsequently merged in [PR #6](https://github.com/devshah207/RiskLens/pull/6). The archived **1,238 development prediction rows** reproduce fixed XGBoost **ROC-AUC 0.609487, Brier 0.102824**; older prose saying ~0.612 is not reproduced by those rows. The completed 433-session 2025–September 2026 final holdout is a separate experiment. See [the current Citi project guide](CITI_RESUME_AND_INTERVIEW.md). Original study decisions, limitations and evidence remain unchanged.
+
 ## Executive assessment
 
 RiskLens estimates the probability that the **NIFTY 50 price index** declines by **at least 1% from close `t` to next observed close `t+1`**, using information available at the close of session `t`. It is **market-index downside event classification**, not loan default prediction, a credit model, portfolio risk-capital VaR or a trading strategy.
