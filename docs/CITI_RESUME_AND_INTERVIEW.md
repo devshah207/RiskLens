@@ -1,47 +1,64 @@
-# Citi RMS Internship — Resume-ready Project and Interview Defense
+# Citi RMS — RiskLens project evidence and interview defense
 
-Use only claims matching code you have actually installed, run, and can explain. Results below were measured on existing 2020–2024 development data; **not an independent 2025–2026 test**. Keep wording accurate.
+**Reconciled on 13 November 2026** against the archived project prediction files and the existing frozen validation memo. This is the *current interview guide*, not a replacement for historical experiment records. Never represent development statistics as the completed final holdout results.
 
-## Recommended project title
+## Project and deliverable
 
-**RiskLens | Financial Risk Analytics, LSTM Forecasting & Model Validation**  
-*Python, PyTorch, XGBoost, scikit-learn, Pandas, risk modeling, time-series analysis, model monitoring*
+**RiskLens** is an implemented, local-first financial risk analytics and model-validation workbench. It estimates the probability that the NIFTY 50 price index will decline by at least **1% at the next trading-session close**, combines chronology-safe data engineering with XGBoost/LSTM model comparison, and presents separate historical Value-at-Risk (VaR), validation, calibration and monitoring evidence. A separate XBRL/PDF research assistant supports evidence-grounded financial filing questions; its documents are **not** model predictors.
 
-## Resume version (strong and factual: 3 bullets)
+## Resume-ready evidence (use for future submissions)
 
-- **Engineered a leakage-audited multi-factor market-risk pipeline** using 2016–2024 NIFTY 50 OHLC, India VIX and S&P 500 data; implemented 11 causal predictors, source-integrity validation, strictly earlier cross-market joins and rolling 30-session input sequences.
-- **Developed and benchmarked PyTorch LSTM and XGBoost classifiers** for next-session >=1% NIFTY downside risk, using expanding-window evaluation across **1,238 development observations (2020–2024)**; best tested XGBoost reached **0.612 ROC-AUC / 0.1028 Brier**, while LSTM reached **0.583 ROC-AUC / 0.1032 Brier**.
-- **Implemented risk-model validation and monitoring controls**, including train-only feature scaling, chronological early stopping, probability-score audits, reproducible test suites, offline reporting dashboard and 95%/99% historical VaR exception backtests (**22 vs. 12.38 expected 99% exceptions**).
+- Built a leakage-audited market-risk pipeline integrating NIFTY 50 OHLC, India VIX and S&P 500 data, with **11 predictors** and strictly earlier-dated external-market joins.
+- Benchmarked XGBoost and PyTorch LSTM classifiers for ≥1% next-session downside classification. On **1,238 archived 2020–2024 development-period walk-forward predictions**, fixed XGBoost achieved **0.609487 ROC-AUC** and **0.102824 Brier score**.
+- Completed a separate, one-time **433-session 2025–September 2026 out-of-time research evaluation**; implemented historical **95%/99% VaR** exception analysis, monitoring, explainability and a read-only Streamlit risk dashboard.
 
-## Short resume version (space-constrained: 2 bullets)
+**Reconciliation of an older resume:** The older 0.612 development ROC-AUC is not reproduced by the two archived aligned prediction CSVs; the result calculated from them is **0.609487**. Do not retroactively claim that a previously submitted resume showed the corrected number. If asked, explain that a later evidence reconciliation identified a small reporting inconsistency and provide the archived metric. The Brier score of approximately **0.1028** is consistent.
 
-- Built **RiskLens**, a multi-factor financial risk modeling platform (PyTorch LSTM, XGBoost, 11 signals, 30-session sequences) with leakage-safe market-data joins and 2020–2024 expanding-window backtesting.
-- Benchmarked **1,238 development predictions** (best model **0.612 ROC-AUC**) and implemented probability-risk monitoring, 95%/99% historical VaR exception testing and an offline model-validation dashboard.
+**Sequence warning:** The legacy sequence benchmark uses **30 sessions**. The separate tuned Optuna **LSTM Trial #86** uses **45 sessions × 11 features**. Do not attribute the earlier model's architecture or metrics to Trial #86.
 
-## 45-second interview introduction
+## Distinguish the experiments
 
-"I built RiskLens to understand how financial institutions develop and independently validate risk models. It combines NIFTY 50 price history with historical India VIX and completed US-session returns. My binary target is whether NIFTY falls at least 1% on the next trading session. I compared a conventional tabular XGBoost benchmark against a two-layer PyTorch LSTM trained on 30-day sequences, using five expanding chronological validation folds and train-only preprocessing. The LSTM did not beat XGBoost, and that was an important finding: advanced architectures can overfit small financial datasets. Beyond prediction, I developed historical VaR exception tests and an auditable risk-reporting dashboard. I focused on point-in-time data integrity, realistic validation and documenting model limitations, because those are essential for risk model monitoring."
+| Evaluation | Fixed XGBoost | LSTM | How to describe it |
+|---|---|---|---|
+| Archived 2020–2024 development predictions, 1,238 dates | **AUC 0.609487; Brier 0.102824** | Legacy 30-session LSTM: AUC approximately **0.583** | Earlier benchmark; repeatedly examined development data, not an untouched holdout |
+| Frozen development comparison | Fixed 11-feature research champion | Tuned 45-session Trial #86 retained as challenger | Selection was documented before final holdout |
+| One-time 2025–Sep 2026 final research holdout, 433 dates, 42 downside events | **AUC 0.672756; Brier 0.084773** | **AUC 0.684874; Brier 0.084299** | Independent *out-of-time research evaluation* of the fixed candidates, not another round of model selection |
 
-## Likely Citi RMS questions and answers
+The LSTM slightly exceeded XGBoost on pooled final-holdout metrics, but the previously selected XGBoost remained the named champion to avoid using final-test results as model-selection feedback. This is **not** proof that XGBoost is inherently superior.
 
-**Why is LSTM appropriate?** A sequence model sees a 30-session path of returns, volatility, momentum and exogenous risk indicators. It may learn path-dependent dynamics. Suitability does not guarantee better accuracy; our actual experiment found it underperformed XGBoost.
+Both candidates had **0/42 true-positive alerts at the default probability cutoff of 0.50**. AUC measures score ranking, not operational detection at that cutoff. Do not describe either as a validated live alarm or trading system.
 
-**Why is XGBoost a good baseline for time series?** The inputs contain causal temporal features and the evaluation uses chronological folds. XGBoost is trained on tabular snapshots that summarize past movements; it is not blind to time when those features are supplied.
+## Interview introduction (about 35–45 seconds)
 
-**How did you prevent leakage?** Training labels with outcomes in the subsequent validation year are purged, the scaler fits only the earlier training portion, early stopping uses an internal earlier period, and the S&P 500 return is always from a completed *earlier* US trading date. The 2025+ final holdout was not opened.
+> RiskLens is a financial risk analytics and model-validation platform I built to estimate the probability of significant next-session declines in the NIFTY 50. I developed a market-data pipeline combining NIFTY, India VIX and S&P 500 information, then compared XGBoost and LSTM approaches through time-ordered evaluation. The platform also includes a completed out-of-time model test, historical Value-at-Risk backtesting, monitoring and a dashboard for examining saved risk evidence. It is an end-to-end research implementation focused on auditable risk estimation, not just model training.
 
-**Why Brier and log loss?** A risk model needs meaningful numerical probabilities, not just correct high/low rankings. Both are proper scoring rules, so they reward truthful probabilities; log loss penalizes unwarranted confidence heavily.
+Give the opening answer, **stop**, and expand only when an interviewer asks.
 
-**What does 0.612 ROC-AUC mean?** In the pooled development predictions, the model ranked a randomly chosen true downside day above a randomly chosen non-downside day roughly 61.2% of the time. It does not imply 61.2% accuracy, profitability or a pass in all years. Pooled cross-fold comparisons can also be affected by changing score distributions.
+## High-priority technical follow-ups
 
-**What is VaR, and what do the exceptions show?** 99% one-day VaR is a loss threshold intended to be exceeded roughly 1% of days under its model assumptions. Our 250-return historical quantile had 22 breaches on 1,238 development dates versus 12.38 expected. We would investigate tail underestimation and exception clustering, not claim the test alone establishes risk-model invalidity.
+**Why define this problem?** It estimates a specific downside-event probability rather than claiming an exact market level, trading profit, or portfolio loss amount. The **1% threshold** is a research target definition, not an industry-standard optimum.
 
-**What would you improve with more time?** More high-quality market history and variables (calendar-verified), model-selection discipline, volatility regime analysis, stress testing, validation of tail clustering, confidence intervals, governance around risk thresholds, and a single precommitted untouched 2025–2026 evaluation. I would not blindly tune the LSTM until it beats XGBoost on previously examined data.
+**Why use NIFTY, India VIX and S&P 500?** NIFTY-based features summarize market returns and volatility; earlier-dated India VIX supplies volatility context, and the latest previously completed US session supplies international market context. Strict source-date alignment reduces look-ahead.
 
-## Submission checklist
+**Why XGBoost and LSTM?** XGBoost handles nonlinear relationships in tabular risk features and is comparatively straightforward to validate. The LSTM processes feature sequences and can represent path dependence. Its additional complexity does not guarantee generalization.
 
-- Confirm tests and run the LSTM / VaR benchmark locally.
-- Commit source, documentation and a screenshot of the dashboard if permitted; **do not commit raw third-party market data**.
-- Do not call the project a credit-risk model, bank regulatory capital engine or profitable trading system.
-- If your GitHub repository is private, a recruiter cannot view it without access. Make it public only after reviewing source/data licensing, privacy and any restrictions; you can still list a project title and demonstrate the local dashboard.
-- If you include performance metrics, label them **2020–2024 development walk-forward results**, not 2025+ out-of-sample test results.
+**Why keep XGBoost champion when Trial #86 scored higher on final holdout?** The champion/challenger roles were predeclared based on development diagnostics. Switching after opening the final holdout would contaminate the independence of that evaluation.
+
+**How did you reduce leakage?** Earlier-only external market joins, purging labels at chronological boundaries and training-only scaling in the LSTM. These controls do not certify the vendors' original data publication timestamps.
+
+**What does 0.609487 AUC mean?** It measures the ability to rank positive versus negative cases across the archived development predictions, not 60.95% classification accuracy or investment success. Brier is a probability-error score; lower values are better.
+
+**What is VaR here?** A **separate historical-quantile risk calculation** using past returns, tested through 95%/99% exceptions. It is not generated by the XGBoost/LSTM downside-probability outputs.
+
+**What is distinctive?** The contribution is an integrated, reproducible *workflow*: point-in-time data alignment, fixed champion/challenger comparison, untouched out-of-time evaluation, distinct VaR and monitoring evidence, and a local analysis interface. Do not claim invention of XGBoost, LSTM or VaR.
+
+**What are the limitations?** The 0.50 cutoff produced no positive alerts on the final holdout; the independent period is finite; original final trained weights were not archived; financial-report answers are not bank- or human-certified. The document research path has recorded source-reverification issues in the inspected snapshot. These are boundaries of a completed research implementation, not evidence of bank production approval.
+
+## Source evidence and safe checks
+
+- [Frozen model validation memo](CITI_MODEL_VALIDATION_MEMO.md)
+- [Completed holdout findings](PHASE5_HOLDOUT_FINDINGS.md)
+- [Historical pre-opening protocol](PHASE5_FINAL_HOLDOUT.md)
+- Saved prediction artifacts: `data/processed/citi_validation/`, `data/processed/phase4_validation/`, `data/processed/phase5_final_holdout/`
+
+Safe verification: `python scripts/verify_phase6_freeze.py` and the existing project tests. Do **not** rerun the already opened final holdout, retune against its outcomes, or claim every research test necessarily passes.
