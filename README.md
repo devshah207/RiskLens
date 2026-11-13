@@ -73,6 +73,8 @@ The LSTM's slightly better holdout scores **do not** justify switching the prese
 
 Authoritative methodology: [`docs/PHASE6_MODEL_FREEZE_RECORD.md`](docs/PHASE6_MODEL_FREEZE_RECORD.md), [`docs/PHASE6_MODEL_FREEZE_MANIFEST.json`](docs/PHASE6_MODEL_FREEZE_MANIFEST.json), [`docs/PHASE5_HOLDOUT_FINDINGS.md`](docs/PHASE5_HOLDOUT_FINDINGS.md). Historical Phase 6 documents may still say "review branch"; the later PR #6 merge supersedes that release status, **not** their scientific numbers.
 
+**Development-period metric clarification (13 November 2026):** The fixed XGBoost model's **1,238 archived 2020–2024 development predictions** reproduce **ROC-AUC 0.609487** and **Brier 0.102824**. An earlier 0.612 prose figure is not reproduced by those saved prediction rows. These are **not** the 433-date 2025–2026 holdout scores above. See the [reconciled Citi interview/evidence guide](docs/CITI_RESUME_AND_INTERVIEW.md).
+
 ## Financial research: published Phase 7 outcomes
 
 Original corpus: **five genuine FY2025 PDFs** for **four companies** (Reliance Industries, HDFC Bank, Infosys, ICICI Bank), plus **eight original NSE XBRL XML filings** (standalone and consolidated).
